@@ -13,43 +13,48 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+from os import PathLike
+
 from .markuputils import attribute_escape, html_escape, xml_escape
-from .robottypes import is_string, is_pathlike
 from .robotio import file_writer
 
 
 class _MarkupWriter:
 
-    def __init__(self, output, write_empty=True, usage=None):
+    def __init__(self, output, write_empty=True, usage=None, preamble=True):
         """
         :param output: Either an opened, file like object, or a path to the
             desired output file. In the latter case, the file is created
             and clients should use :py:meth:`close` method to close it.
         :param write_empty: Whether to write empty elements and attributes.
         """
-        if is_string(output) or is_pathlike(output):
+        if isinstance(output, (str, PathLike)):
             output = file_writer(output, usage=usage)
         self.output = output
         self._write_empty = write_empty
-        self._preamble()
+        if preamble:
+            self._preamble()
 
     def _preamble(self):
         pass
 
-    def start(self, name, attrs=None, newline=True):
-        attrs = self._format_attrs(attrs)
+    def start(self, name, attrs=None, newline=True, write_empty=None):
+        attrs = self._format_attrs(attrs, write_empty)
         self._start(name, attrs, newline)
 
     def _start(self, name, attrs, newline):
-        self._write('<%s %s>' % (name, attrs) if attrs else '<%s>' % name, newline)
+        self._write(f"<{name} {attrs}>" if attrs else f"<{name}>", newline)
 
-    def _format_attrs(self, attrs):
+    def _format_attrs(self, attrs, write_empty):
         if not attrs:
-            return ''
-        write_empty = self._write_empty
-        return ' '.join('%s="%s"' % (name, attribute_escape(value or ''))
-                        for name, value in self._order_attrs(attrs)
-                        if write_empty or value)
+            return ""
+        if write_empty is None:
+            write_empty = self._write_empty
+        return " ".join(
+            f'{name}="{attribute_escape(value or "")}"'
+            for name, value in self._order_attrs(attrs)
+            if write_empty or value
+        )
 
     def _order_attrs(self, attrs):
         return attrs.items()
@@ -62,11 +67,21 @@ class _MarkupWriter:
         raise NotImplementedError
 
     def end(self, name, newline=True):
-        self._write('</%s>' % name, newline)
+        self._write(f"</{name}>", newline)
 
-    def element(self, name, content=None, attrs=None, escape=True, newline=True):
-        attrs = self._format_attrs(attrs)
-        if self._write_empty or content or attrs:
+    def element(
+        self,
+        name,
+        content=None,
+        attrs=None,
+        escape=True,
+        newline=True,
+        write_empty=None,
+    ):
+        attrs = self._format_attrs(attrs, write_empty)
+        if write_empty is None:
+            write_empty = self._write_empty
+        if write_empty or content or attrs:
             self._start(name, attrs, newline=False)
             self.content(content, escape)
             self.end(name, newline)
@@ -78,7 +93,7 @@ class _MarkupWriter:
     def _write(self, text, newline=False):
         self.output.write(text)
         if newline:
-            self.output.write('\n')
+            self.output.write("\n")
 
 
 class HtmlWriter(_MarkupWriter):
@@ -98,16 +113,26 @@ class XmlWriter(_MarkupWriter):
     def _escape(self, text):
         return xml_escape(text)
 
-    def element(self, name, content=None, attrs=None, escape=True, newline=True):
+    def element(
+        self,
+        name,
+        content=None,
+        attrs=None,
+        escape=True,
+        newline=True,
+        write_empty=None,
+    ):
         if content:
-            _MarkupWriter.element(self, name, content, attrs, escape, newline)
+            super().element(name, content, attrs, escape, newline, write_empty)
         else:
-            self._self_closing_element(name, attrs, newline)
+            self._self_closing_element(name, attrs, newline, write_empty)
 
-    def _self_closing_element(self, name, attrs, newline):
-        attrs = self._format_attrs(attrs)
-        if self._write_empty or attrs:
-            self._write('<%s %s/>' % (name, attrs) if attrs else '<%s/>' % name, newline)
+    def _self_closing_element(self, name, attrs, newline, write_empty):
+        attrs = self._format_attrs(attrs, write_empty)
+        if write_empty is None:
+            write_empty = self._write_empty
+        if write_empty or attrs:
+            self._write(f"<{name} {attrs}/>" if attrs else f"<{name}/>", newline)
 
 
 class NullMarkupWriter:

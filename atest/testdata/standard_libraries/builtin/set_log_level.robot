@@ -27,7 +27,17 @@ Set Log Level
     [Teardown]    Set Log Level    INFO
 
 Invalid Log Level Failure Is Catchable
-    Run Keyword And Expect Error    Invalid log level 'INVALID'.    Set Log Level    INVALID
+    [Documentation]    FAIL
+    ...    ValueError: Argument 'level' got value 'INVALID' that cannot be converted to 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR' or 'NONE'.
+    Set Log Level    INVALID
+
+Reset Log Level
+    Set Log Level    DEBUG
+    Log    This is logged    INFO
+    Log    This is logged    DEBUG
+    Reset Log Level
+    Log    This is logged        INFO
+    Log    This is not logged    DEBUG
 
 Log Level Goes To HTML
     Set Log Level    Trace

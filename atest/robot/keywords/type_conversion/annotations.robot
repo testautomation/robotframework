@@ -1,5 +1,5 @@
 *** Settings ***
-Suite Setup      Run Tests    ${EMPTY}    keywords/type_conversion/annotations.robot
+Suite Setup      Run Tests    --max-error-lines NONE    keywords/type_conversion/annotations.robot
 Resource         atest_resource.robot
 
 *** Test Cases ***
@@ -54,6 +54,9 @@ Invalid boolean
 String
     Check Test Case    ${TESTNAME}
 
+String sub type
+    Check Test Case    ${TESTNAME}
+
 Invalid string
     Check Test Case    ${TESTNAME}
 
@@ -63,25 +66,28 @@ Bytes
 Invalid bytes
     Check Test Case    ${TESTNAME}
 
-Bytestring
-    Check Test Case    ${TESTNAME}
-
-Invalid bytesstring
-    Check Test Case    ${TESTNAME}
-
 Bytearray
     Check Test Case    ${TESTNAME}
 
 Invalid bytearray
     Check Test Case    ${TESTNAME}
 
+Bytestring replacement
+    Check Test Case    ${TESTNAME}
+
 Datetime
+    Check Test Case    ${TESTNAME}
+
+Datetime with now and today
     Check Test Case    ${TESTNAME}
 
 Invalid datetime
     Check Test Case    ${TESTNAME}
 
 Date
+    Check Test Case    ${TESTNAME}
+
+Date with now and today
     Check Test Case    ${TESTNAME}
 
 Invalid date
@@ -91,6 +97,12 @@ Timedelta
     Check Test Case    ${TESTNAME}
 
 Invalid timedelta
+    Check Test Case    ${TESTNAME}
+
+Path
+    Check Test Case    ${TESTNAME}
+
+Invalid Path
     Check Test Case    ${TESTNAME}
 
 Enum
@@ -117,10 +129,13 @@ Invalid Enum
 Invalid IntEnum
     Check Test Case    ${TESTNAME}
 
+None
+    Check Test Case    ${TESTNAME}
+
 NoneType
     Check Test Case    ${TESTNAME}
 
-Invalid NoneType
+Invalid None
     Check Test Case    ${TESTNAME}
 
 List
@@ -130,6 +145,9 @@ Invalid list
     Check Test Case    ${TESTNAME}
 
 Sequence (abc)
+    Check Test Case    ${TESTNAME}
+
+MutableSequence (abc)
     Check Test Case    ${TESTNAME}
 
 Invalid sequence (abc)
@@ -148,6 +166,9 @@ Invalid dictionary
     Check Test Case    ${TESTNAME}
 
 Mapping (abc)
+    Check Test Case    ${TESTNAME}
+
+MutableMapping (abc)
     Check Test Case    ${TESTNAME}
 
 Invalid mapping (abc)
@@ -171,7 +192,15 @@ Frozenset
 Invalid frozenset
     Check Test Case    ${TESTNAME}
 
+Too complex expression
+    [Documentation]    PyPY doesn't fail for MemoryError like CPython.
+    [Tags]    no-pypy
+    Check Test Case    ${TESTNAME}
+
 Unknown types are not converted
+    Check Test Case    ${TESTNAME}
+
+Unknown types are not converted in union
     Check Test Case    ${TESTNAME}
 
 Non-type values don't cause errors
@@ -204,10 +233,19 @@ Invalid kwonly
 Return value annotation causes no error
     Check Test Case    ${TESTNAME}
 
-None as default
+None as default with known type
+    Check Test Case    ${TESTNAME}
+
+None as default with unknown type
+    Check Test Case    ${TESTNAME}
+
+Empty string when None is used as default but not as explicit type
     Check Test Case    ${TESTNAME}
 
 Forward references
+    Check Test Case    ${TESTNAME}
+
+Unknown forward references
     Check Test Case    ${TESTNAME}
 
 @keyword decorator overrides annotations

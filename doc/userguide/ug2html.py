@@ -23,6 +23,9 @@ Version number to use is got automatically from 'src/robot/version.py' file.
 import os
 import sys
 import shutil
+from pathlib import Path
+
+from translations import update_translations
 
 # First part of this file is Pygments configuration and actual
 # documentation generation follows it.
@@ -146,21 +149,26 @@ def create_userguide():
     from docutils.core import publish_cmdline
 
     print('Creating user guide ...')
+    print('Updating translations')
+    update_translations()
     version, version_file = _update_version()
     install_file = _copy_installation_instructions()
 
     description = 'HTML generator for Robot Framework User Guide.'
-    arguments = ['--time',
-                 '--stylesheet-path', ['src/userguide.css'],
+    arguments = ['--stylesheet-path', ['src/userguide.css'],
                  'src/RobotFrameworkUserGuide.rst',
                  'RobotFrameworkUserGuide.html']
     os.chdir(CURDIR)
     publish_cmdline(writer_name='html', description=description, argv=arguments)
     os.unlink(version_file)
     os.unlink(install_file)
-    ugpath = os.path.abspath(arguments[-1])
-    print(ugpath)
+    ugpath = Path(arguments[-1]).absolute()
+    print(_link(ugpath))
     return ugpath, version
+
+
+def _link(path):
+    return f'\033]8;;{path.as_uri()}\033\\{path}\033]8;;\033\\'
 
 
 def _update_version():
@@ -242,7 +250,7 @@ def create_distribution():
         print(f'Copying {source!r} -> {dest!r}')
         shutil.copy(source, dest)
 
-    link_regexp = re.compile('''
+    link_regexp = re.compile(r'''
 (<(a|img)\s+.*?)
 (\s+(href|src)="(.*?)"|>)
 ''', re.VERBOSE | re.DOTALL | re.IGNORECASE)

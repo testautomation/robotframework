@@ -64,12 +64,6 @@
         "$ref": "#/definitions/Keyword"
       }
     },
-    "dataTypes": {
-      "title": "Datatypes",
-      "description": "Deprecated. Use 'typedocs' instead.",
-      "default": {},
-      "type": "object"
-    },
     "typedocs": {
       "title": "Typedocs",
       "type": "array",
@@ -94,13 +88,14 @@
     "keywords",
     "typedocs"
   ],
+  "additionalProperties": false,
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "definitions": {
     "SpecVersion": {
       "title": "SpecVersion",
       "description": "Version of the spec.",
       "enum": [
-        1
+        4
       ],
       "type": "integer"
     },
@@ -109,7 +104,8 @@
       "description": "Type of the doc: LIBRARY or RESOURCE.",
       "enum": [
         "LIBRARY",
-        "RESOURCE"
+        "RESOURCE",
+        "SUITE"
       ],
       "type": "string"
     },
@@ -125,14 +121,65 @@
     },
     "DocumentationFormat": {
       "title": "DocumentationFormat",
-      "description": "Documentation format, typically HTML.",
+      "description": "Documentation source format.",
       "enum": [
         "ROBOT",
+        "MARKDOWN",
+        "REST",
         "HTML",
-        "TEXT",
-        "REST"
+        "TEXT"
       ],
       "type": "string"
+    },
+    "TypeInfo": {
+      "title": "TypeInfo",
+      "type": "object",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "typedoc": {
+          "title": "Typedoc",
+          "description": "Map type to info in 'typedocs'.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "nested": {
+          "title": "Nested",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TypeInfo"
+          }
+        },
+        "union": {
+          "title": "Union",
+          "type": "boolean"
+        },
+        "alias": {
+          "title": "Alias",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "nested",
+        "union"
+      ],
+      "additionalProperties": false
     },
     "ArgumentKind": {
       "title": "ArgumentKind",
@@ -157,24 +204,31 @@
           "title": "Name",
           "type": "string"
         },
-        "types": {
-          "title": "Types",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+        "doc": {
+          "title": "Doc",
+          "type": "string"
         },
-        "typedocs": {
-          "title": "Typedocs",
-          "description": "Maps types to type information in 'typedocs'.",
-          "type": "object"
+        "type": {
+          "title": "TypeInfo",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TypeInfo"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "defaultValue": {
           "title": "Defaultvalue",
           "description": "Possible default value or 'null'.",
-          "type": [
-            "string",
-            "null"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "kind": {
@@ -191,12 +245,12 @@
       },
       "required": [
         "name",
-        "types",
-        "typedocs",
+        "doc",
         "kind",
         "required",
         "repr"
-      ]
+      ],
+      "additionalProperties": false
     },
     "Keyword": {
       "title": "Keyword",
@@ -206,13 +260,6 @@
           "title": "Name",
           "type": "string"
         },
-        "args": {
-          "title": "Args",
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Argument"
-          }
-        },
         "doc": {
           "title": "Doc",
           "type": "string"
@@ -221,12 +268,70 @@
           "title": "Shortdoc",
           "type": "string"
         },
+        "args": {
+          "title": "Args",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Argument"
+          }
+        },
+        "returnType": {
+          "title": "TypeInfo",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TypeInfo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "returnDoc": {
+          "title": "Returndoc",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "raises": {
+          "title": "Raises",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
         "tags": {
           "title": "Tags",
           "type": "array",
           "items": {
             "type": "string"
           }
+        },
+        "private": {
+          "title": "Private",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "deprecated": {
+          "title": "Deprecated",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "source": {
           "title": "Source",
@@ -235,18 +340,26 @@
         },
         "lineno": {
           "title": "Lineno",
-          "type": "integer"
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
         "name",
-        "args",
         "doc",
         "shortdoc",
+        "args",
+        "raises",
         "tags",
-        "source",
-        "lineno"
-      ]
+        "source"
+      ],
+      "additionalProperties": false
     },
     "TypeDocType": {
       "title": "TypeDocType",
@@ -275,7 +388,8 @@
       "required": [
         "name",
         "value"
-      ]
+      ],
+      "additionalProperties": false
     },
     "TypedDictItem": {
       "title": "TypedDictItem",
@@ -291,16 +405,21 @@
         },
         "required": {
           "title": "Required",
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
           ]
         }
       },
       "required": [
         "key",
         "type"
-      ]
+      ],
+      "additionalProperties": false
     },
     "TypeDoc": {
       "title": "TypeDoc",
@@ -336,18 +455,32 @@
         "members": {
           "title": "Members",
           "description": "Used only with Enum type.",
-          "type": "array",
           "items": {
             "$ref": "#/definitions/EnumMember"
-          }
+          },
+          "anyOf": [
+            {
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "items": {
           "title": "Items",
           "description": "Used only with TypedDict type.",
-          "type": "array",
           "items": {
             "$ref": "#/definitions/TypedDictItem"
-          }
+          },
+          "anyOf": [
+            {
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -356,7 +489,8 @@
         "doc",
         "usages",
         "accepts"
-      ]
+      ],
+      "additionalProperties": false
     }
   }
 }

@@ -13,51 +13,84 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+from collections.abc import Mapping
+from pathlib import Path
+from typing import Any, Generic, Sequence, Type, TYPE_CHECKING, TypeVar
+
 from robot.utils import setter
 
-from .body import Body
+from .body import Body, BodyItem
 from .fixture import create_fixture
 from .itemlist import ItemList
-from .keyword import Keyword, Keywords
-from .modelobject import ModelObject
+from .keyword import Keyword
+from .metadata import Metadata
+from .modelobject import DataDict, ModelObject
 from .tags import Tags
 
+if TYPE_CHECKING:
+    from .testsuite import TestSuite
+    from .visitor import SuiteVisitor
 
-class TestCase(ModelObject):
+
+TC = TypeVar("TC", bound="TestCase")
+KW = TypeVar("KW", bound="Keyword", covariant=True)
+
+
+class TestCase(ModelObject, Generic[KW]):
     """Base model for a single test case.
 
     Extended by :class:`robot.running.model.TestCase` and
     :class:`robot.result.model.TestCase`.
     """
-    body_class = Body
-    fixture_class = Keyword
-    repr_args = ('name',)
-    __slots__ = ['parent', 'name', 'doc', 'timeout', 'lineno', '_setup', '_teardown']
 
-    def __init__(self, name='', doc='', tags=None, timeout=None, lineno=None,
-                 parent=None):
+    type = "TEST"
+    body_class = Body
+    # See model.TestSuite on removing the type ignore directive
+    fixture_class: Type[KW] = Keyword  # type: ignore
+    repr_args = ("name",)
+    __slots__ = ("parent", "name", "doc", "timeout", "lineno", "_setup", "_teardown")
+
+    def __init__(
+        self,
+        name: str = "",
+        doc: str = "",
+        tags: "Tags | Sequence[str]" = (),
+        timeout: "str | None" = None,
+        lineno: "int | None" = None,
+        metadata: "Mapping[str, str] | None" = None,
+        parent: "TestSuite[KW, TestCase[KW]] | None" = None,
+    ):
         self.name = name
         self.doc = doc
         self.tags = tags
+        self.metadata = metadata
         self.timeout = timeout
         self.lineno = lineno
         self.parent = parent
-        self.body = None
-        self._setup = None
-        self._teardown = None
+        self.body = []
+        self._setup: KW | None = None
+        self._teardown: KW | None = None
 
     @setter
-    def body(self, body):
+    def body(self, body: "Sequence[BodyItem | DataDict]") -> Body:
         """Test body as a :class:`~robot.model.body.Body` object."""
         return self.body_class(self, body)
 
     @setter
-    def tags(self, tags):
+    def tags(self, tags: "Tags | Sequence[str]") -> Tags:
         """Test tags as a :class:`~.model.tags.Tags` object."""
         return Tags(tags)
 
+    @setter
+    def metadata(self, metadata: "Mapping[str, str] | None") -> Metadata:
+        """Test metadata as a :class:`~.model.metadata.Metadata` object.
+
+        New in Robot Framework 7.5.
+        """
+        return Metadata(metadata)
+
     @property
-    def setup(self):
+    def setup(self) -> KW:
         """Test setup as a :class:`~.model.keyword.Keyword` object.
 
         This attribute is a ``Keyword`` object also when a test has no setup
@@ -81,16 +114,26 @@ class TestCase(ModelObject):
         New in Robot Framework 4.0. Earlier setup was accessed like
         ``test.keywords.setup``.
         """
-        if self._setup is None and self:
-            self._setup = create_fixture(None, self, Keyword.SETUP)
+        if self._setup is None:
+            self._setup = create_fixture(
+                self.fixture_class,
+                None,
+                self,
+                Keyword.SETUP,
+            )
         return self._setup
 
     @setup.setter
-    def setup(self, setup):
-        self._setup = create_fixture(setup, self, Keyword.SETUP)
+    def setup(self, setup: "KW | DataDict | None"):
+        self._setup = create_fixture(
+            self.fixture_class,
+            setup,
+            self,
+            Keyword.SETUP,
+        )
 
     @property
-    def has_setup(self):
+    def has_setup(self) -> bool:
         """Check does a suite have a setup without creating a setup object.
 
         A difference between using ``if test.has_setup:`` and ``if test.setup:``
@@ -104,21 +147,31 @@ class TestCase(ModelObject):
         return bool(self._setup)
 
     @property
-    def teardown(self):
+    def teardown(self) -> KW:
         """Test teardown as a :class:`~.model.keyword.Keyword` object.
 
         See :attr:`setup` for more information.
         """
-        if self._teardown is None and self:
-            self._teardown = create_fixture(None, self, Keyword.TEARDOWN)
+        if self._teardown is None:
+            self._teardown = create_fixture(
+                self.fixture_class,
+                None,
+                self,
+                Keyword.TEARDOWN,
+            )
         return self._teardown
 
     @teardown.setter
-    def teardown(self, teardown):
-        self._teardown = create_fixture(teardown, self, Keyword.TEARDOWN)
+    def teardown(self, teardown: "KW | DataDict | None"):
+        self._teardown = create_fixture(
+            self.fixture_class,
+            teardown,
+            self,
+            Keyword.TEARDOWN,
+        )
 
     @property
-    def has_teardown(self):
+    def has_teardown(self) -> bool:
         """Check does a test have a teardown without creating a teardown object.
 
         See :attr:`has_setup` for more information.
@@ -128,57 +181,72 @@ class TestCase(ModelObject):
         return bool(self._teardown)
 
     @property
-    def keywords(self):
-        """Deprecated since Robot Framework 4.0
-
-        Use :attr:`body`, :attr:`setup` or :attr:`teardown` instead.
-        """
-        keywords = [self.setup] + list(self.body) + [self.teardown]
-        return Keywords(self, [kw for kw in keywords if kw])
-
-    @keywords.setter
-    def keywords(self, keywords):
-        Keywords.raise_deprecation_error()
-
-    @property
-    def id(self):
+    def id(self) -> str:
         """Test case id in format like ``s1-t3``.
 
         See :attr:`TestSuite.id <robot.model.testsuite.TestSuite.id>` for
         more information.
         """
         if not self.parent:
-            return 't1'
-        return '%s-t%d' % (self.parent.id, self.parent.tests.index(self)+1)
+            return "t1"
+        tests = self.parent.tests
+        index = tests.index(self) if self in tests else len(tests)
+        return f"{self.parent.id}-t{index + 1}"
 
     @property
-    def longname(self):
-        """Test name prefixed with the long name of the parent suite."""
+    def full_name(self) -> str:
+        """Test name prefixed with the full name of the parent suite."""
         if not self.parent:
             return self.name
-        return '%s.%s' % (self.parent.longname, self.name)
+        return f"{self.parent.full_name}.{self.name}"
 
     @property
-    def source(self):
+    def longname(self) -> str:
+        """Deprecated since Robot Framework 7.0. Use :attr:`full_name` instead."""
+        return self.full_name
+
+    @property
+    def source(self) -> "Path | None":
         return self.parent.source if self.parent is not None else None
 
-    def visit(self, visitor):
+    def visit(self, visitor: "SuiteVisitor"):
         """:mod:`Visitor interface <robot.model.visitor>` entry-point."""
         visitor.visit_test(self)
 
-    def __str__(self):
-        return self.name
+    def to_dict(self) -> "dict[str, Any]":
+        data: dict[str, Any] = {"name": self.name}
+        if self.doc:
+            data["doc"] = self.doc
+        if self.tags:
+            data["tags"] = tuple(self.tags)
+        if self.metadata:
+            data["metadata"] = dict(self.metadata)
+        if self.timeout:
+            data["timeout"] = self.timeout
+        if self.lineno:
+            data["lineno"] = self.lineno
+        if self.has_setup:
+            data["setup"] = self.setup.to_dict()
+        if self.has_teardown:
+            data["teardown"] = self.teardown.to_dict()
+        data["body"] = self.body.to_dicts()
+        return data
 
 
-class TestCases(ItemList):
-    __slots__ = []
+class TestCases(ItemList[TC]):
+    __slots__ = ()
 
-    def __init__(self, test_class=TestCase, parent=None, tests=None):
-        ItemList.__init__(self, test_class, {'parent': parent}, tests)
+    def __init__(
+        self,
+        test_class: Type[TC] = TestCase,
+        parent: "TestSuite | None" = None,
+        tests: "Sequence[TC | DataDict]" = (),
+    ):
+        super().__init__(test_class, {"parent": parent}, tests)
 
-    def _check_type_and_set_attrs(self, *tests):
-        tests = ItemList._check_type_and_set_attrs(self, *tests)
-        for test in tests:
+    def _check_type_and_set_attrs(self, test):
+        test = super()._check_type_and_set_attrs(test)
+        if test.parent:
             for visitor in test.parent._visitors:
                 test.visit(visitor)
-        return tests
+        return test

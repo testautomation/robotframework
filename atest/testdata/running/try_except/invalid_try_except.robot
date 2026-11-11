@@ -77,7 +77,7 @@ Multiple default EXCEPTs
     END
 
 AS requires variable
-    [Documentation]    FAIL    EXCEPT's AS requires variable.
+    [Documentation]    FAIL    EXCEPT AS requires a value.
     TRY
         Fail   Should not be executed
     EXCEPT    AS
@@ -85,7 +85,7 @@ AS requires variable
     END
 
 AS accepts only one variable
-    [Documentation]    FAIL    EXCEPT's AS accepts only one variable.
+    [Documentation]    FAIL    EXCEPT AS accepts only one value.
     TRY
         Fail   Should not be executed
     EXCEPT    AS    foo    ${foo}
@@ -93,7 +93,7 @@ AS accepts only one variable
     END
 
 Invalid AS variable
-    [Documentation]    FAIL    EXCEPT's AS variable 'foo' is invalid.
+    [Documentation]    FAIL    EXCEPT AS variable 'foo' is invalid.
     TRY
         Fail   Should not be executed
     EXCEPT    AS    foo
@@ -205,7 +205,7 @@ FINALLY before ELSE
     END
 
 Template with TRY
-    [Documentation]    FAIL    Templates cannot be used with TRY.
+    [Documentation]    FAIL    TRY does not support templates.
     [Template]    Log many
     TRY
         Fail   Should not be executed
@@ -214,7 +214,7 @@ Template with TRY
     END
 
 Template with TRY inside IF
-    [Documentation]    FAIL    Templates cannot be used with TRY.
+    [Documentation]    FAIL    TRY does not support templates.
     [Template]    Log many
     IF    True
         TRY
@@ -228,7 +228,7 @@ Template with IF inside TRY
     [Documentation]    FAIL
     ...    Multiple errors:
     ...    - TRY must have closing END.
-    ...    - Templates cannot be used with TRY.
+    ...    - TRY does not support templates.
     [Template]    Log many
     TRY
         IF    True
@@ -260,6 +260,25 @@ CONTINUE in FINALLY
 RETURN in FINALLY
     [Documentation]    FAIL    RETURN cannot be used in FINALLY branch.
     RETURN in FINALLY
+
+Invalid TRY/EXCEPT causes syntax error that cannot be caught
+    [Documentation]    FAIL    TRY branch cannot be empty.
+    TRY
+        TRY
+        EXCEPT
+            Fail    Not run
+        END
+    EXCEPT
+        Fail    Not run because error cannot be caught
+    ELSE
+        Fail    Not run either
+    END
+
+Dangling FINALLY
+    [Documentation]    FAIL FINALLY is not allowed in this context.
+    IF    ${True}
+        FINALLY
+    END
 
 *** Keywords ***
 RETURN in FINALLY

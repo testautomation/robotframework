@@ -56,7 +56,7 @@ Automatic module import
     ${{os.sep}}                                 ${/}
     ${{round(math.pi, 2)}}                      ${3.14}
     ${{json.dumps([1, None, 'kolme'])}}         [1, null, "kolme"]
-    ${{robot.__version__.split('.')[0] in ('3', '4', '5')}}
+    ${{robot.__version__.split('.')[0] in ('6', '7', '8', '9')}}
     ...                                         ${True}
 
 Module imports are case-sensitive
@@ -97,12 +97,12 @@ Escape characters and curly braces
     ${{ '\${X}' }}                              \${X}
     ${{ '\\${X}' }}                             \\X
     ${{ '$\{X\}' }}                             \${X}
-    ${{ '\$\{X\}' }}                            \\\${X}
+    ${{ '\\$\{X\}' }}                           \\\${X}
     ${{ '\\' }}                                 \\
     ${{ '\}' }}                                 }
     ${{ '\{' }}                                 {
     ${{ '{}' }}                                 {}
-    ${{ __import__('${{'re'}}').match('(\d{2})${X}\\s{2}', '1${2}X\t\r\${FOO}').group(${1}) }}
+    ${{ __import__('${{'re'}}').match(r'(\d{2})${X}\s{2}', '1${2}X\t\r\${FOO}').group(${1}) }}
     ...                                         12
 
 Invalid

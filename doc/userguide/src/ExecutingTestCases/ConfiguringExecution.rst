@@ -2,11 +2,9 @@ Configuring execution
 =====================
 
 This section explains different command line options that can be used
-for configuring the `test execution`_ or `post-processing
-outputs`_. Options related to generated output files are discussed in
-the `next section`__.
-
-__ `Created outputs`_
+for configuring the `test execution`_ or `post-processing outputs`_.
+Options related to the generated `execution artifacts`_ are discussed in
+the next section.
 
 .. contents::
    :depth: 2
@@ -15,39 +13,145 @@ __ `Created outputs`_
 Selecting files to parse
 ------------------------
 
-When executing a single file, Robot Framework tries to parse and run it
-regardless the name or the file extension. The file is expected to use the `plain text
-format`__ or, if it has :file:`.rst` or :file:`.rest` extension,
-the `reStructuredText format`_::
+Executing individual files
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    robot example.robot    # Common case.
-    robot example.tsv      # Must be compatible with the plain text format.
-    robot example.rst      # reStructuredText format.
+When executing individual files, Robot Framework tries to parse and run them
+regardless the name or the file extension. What parser to use depends
+on the extension:
+
+- :file:`.robot` files and files that are not recognized are parsed using
+  the normal `Robot Framework parser`__.
+- :file:`.rst` and :file:`.rest` files are parsed using the `reStructuredText parser`__.
+- :file:`.md` and :file:`.markdown` files are parsed using the `Markdown parser`__.
+- :file:`.rbt` and :file:`.json` files are parsed using the `JSON parser`__.
+- Files supported by `custom parsers`__ are parsed by a matching parser.
+
+Examples::
+
+    robot example.robot    # Standard Robot Framework parser.
+    robot example.tsv      # Must be compatible with the standard parser.
+    robot example.rst      # reStructuredText parser.
+    robot example.md       # Markdown parser.
+    robot x.robot y.rst    # Parse both files using an appropriate parser.
 
 __ `Supported file formats`_
+__ `reStructuredText data format`_
+__ `Markdown data format`_
+__ `JSON data format`_
+__ `Using custom parsers`_
 
-When executing a directory__, Robot Framework ignores all files and directories
-starting with a dot (:file:`.`) or an underscore (:file:`_`) and, by default,
-only parses files with the :file:`.robot` extension. If files use other
-extensions, the :option:`--extension (-F)` option must be used to explicitly
-tell the framework to parse also them. If there is a need to parse more
-than one kind of files, it is possible to use a colon `:` to separate
-extensions. Matching extensions is case insensitive and the leading `.`
-can be omitted::
+Included and excluded files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  robot path/to/tests/                   # Parse only *.robot files.
-  robot --extension TSV path/to/tests    # Parse only *.tsv files.
-  robot -F robot:rst path/to/tests       # Parse *.robot and *.rst files.
+When executing a directory__, files and directories are parsed using
+the following rules:
 
-If files in one format use different extensions like :file:`.rst` and
-:file:`.rest`, they must be specified separately. Using just one of them
-would mean that other files in that format are skipped.
+- All files and directories starting with a dot (:file:`.`) or an underscore
+  (:file:`_`) are ignored.
+- :file:`.robot` files are parsed using the normal `Robot Framework parser`__.
+- :file:`.robot.rst` files are parsed using the `reStructuredText parser`__.
+- :file:`.robot.md` files are parsed using the `Markdown parser`__.
+- :file:`.rbt` files are parsed using the `JSON parser`__.
+- Files supported by `custom parsers`__ are parsed by a matching parser.
+- Other files are ignored unless parsing them has been enabled by using
+  the :option:`--parseinclude` or :option:`--extension` options discussed
+  in the subsequent sections.
 
-.. note:: Prior to Robot Framework 3.1 also TXT, TSV and HTML files were
-          parsed by default. Starting from Robot Framework 3.2 HTML files
-          are not supported at all.
+__ `Suite directories`_
+__ `Supported file formats`_
+__ `reStructuredText data format`_
+__ `Markdown data format`_
+__ `JSON data format`_
+__ `Using custom parsers`_
 
-__ `Test suite directories`_
+Selecting files by name or path
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When executing a directory, it is possible to parse only certain files based on
+their name or path by using the :option:`--parseinclude (-I)` option. This option
+has slightly different semantics depending on the value it is used with:
+
+- If the value is just a file name like `example.robot`, files matching
+  the name in all directories will be parsed.
+
+- To match only a certain file in a certain directory, files can be given
+  as relative or absolute paths like `path/to/tests.robot`.
+
+- If the value is a path to a directory, all files inside that directory are parsed,
+  recursively.
+
+Examples::
+
+    robot --parseinclude example.robot tests       # Parse `example.robot` files anywhere under `tests`.
+    robot -I example_*.robot -I ???.robot tests    # Parse files matching `example_*.robot` or `???.robot` under `tests`.
+    robot -I tests/example.robot tests             # Parse only `tests/example.robot`.
+    robot --parseinclude tests/example tests       # Parse files under `tests/example` directory, recursively.
+
+Values used with :option:`--parseinclude` are case-insensitive and support
+`glob patterns <Simple patterns_>`__ like `example_*.robot`. There are, however,
+two small differences compared to how patterns typically work with Robot Framework:
+
+- `*` matches only a single path segment. For example, `path/*/tests.robot`
+  matches :file:`path/to/tests.robot` but not :file:`path/to/nested/tests.robot`.
+
+- `**` can be used to enable recursive matching. For example, `path/**/tests.robot`
+  matches both :file:`path/to/tests.robot` and :file:`path/to/nested/tests.robot`.
+
+If the pattern contains an extension, files with that extension are parsed
+even if they by `default would not be`__. What parser to use depends on
+the used extension:
+
+- :file:`.rst` and :file:`.rest` files are parsed using the `reStructuredText parser`__.
+- :file:`.md` and :file:`.markdown` files are parsed using the `Markdown parser`__.
+- :file:`.json` files are parsed using the `JSON parser`__.
+- Other files are parsed using the normal `Robot Framework parser`__.
+
+Notice that when you use a pattern like `*.robot` and there exists a file that
+matches the pattern in the execution directory, the shell may resolve
+the pattern before Robot Framework is called and the value passed to
+it is the file name, not the original pattern. In such cases you need
+to quote or escape the pattern like `'*.robot'` or `\*.robot`.
+
+__ `Included and excluded files`_
+__ `reStructuredText data format`_
+__ `Markdown data format`_
+__ `JSON data format`_
+__ `Supported file formats`_
+
+.. note:: :option:`--parseinclude` is new in Robot Framework 6.1.
+
+Selecting files by extension
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In addition to using the :option:`--parseinclude` option discussed in the
+previous section, it is also possible to enable parsing files that are `not
+parsed by default`__ by using the :option:`--extension (-F)` option.
+Matching extensions is case insensitive and the leading dot can be omitted.
+If there is a need to parse more than one kind of files, it is possible to
+use a colon `:` to separate extensions::
+
+    robot --extension rst path/to/tests    # Parse only *.rst files.
+    robot -F robot:rst path/to/tests       # Parse *.robot and *.rst files.
+
+The above is equivalent to the following :option:`--parseinclude` usage::
+
+    robot --parseinclude *.rst path/to/tests
+    robot -I *.robot -I *.rst path/to/tests
+
+Because the :option:`--parseinclude` option is more powerful and covers all
+same use cases as the :option:`--extension` option, the latter is likely to be
+deprecated in the future. Users are recommended to use :option:`--parseinclude`
+already now.
+
+__ `Included and excluded files`_
+
+Using custom parsers
+~~~~~~~~~~~~~~~~~~~~
+
+External parsers can parse files that Robot Framework does not recognize
+otherwise. For more information about creating and using such parsers see
+the `Parser interface`_ section.
 
 Selecting test cases
 --------------------
@@ -56,48 +160,87 @@ Robot Framework offers several command line options for selecting
 which test cases to execute. The same options work also when `executing
 tasks`_ and when post-processing outputs with Rebot_.
 
-By test suite and test case names
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+By test names
+~~~~~~~~~~~~~
 
-Test suites and test cases can be selected by their names with the command
-line options :option:`--suite (-s)` and :option:`--test (-t)`,
-respectively.  Both of these options can be used several times to
-select several test suites or cases. Arguments to these options are
-case- and space-insensitive, and there can also be `simple
-patterns`_ matching multiple names.  If both the :option:`--suite` and
-:option:`--test` options are used, only test cases in matching suites
-with matching names are selected.
+The easiest way to select only some tests to be run is using the
+:option:`--test (-t)` option. As the name implies, it can be used for
+selecting tests by their names. Given names are case, space and underscore
+insensitive and they also support `simple patterns`_. The option can be
+used multiple times to match multiple tests::
 
-::
+  --test Example                   # Match only tests with name 'Example'.
+  --test example*                  # Match tests starting with 'example'.
+  --test first --test second       # Match tests with name 'first' or 'second'.
 
-  --test Example
-  --test mytest --test yourtest
-  --test example*
-  --test mysuite.mytest
-  --test *.suite.mytest
-  --suite example-??
-  --suite mysuite --test mytest --test your*
+To pinpoint a test more precisely, it is possible to prefix the test name
+with a suite name::
 
-Using the :option:`--suite` option is more or less the same as executing only
-the appropriate test case file or directory. One major benefit is the
-possibility to select the suite based on its parent suite. The syntax
-for this is specifying both the parent and child suite names separated
-with a dot. In this case, the possible setup and teardown of the parent
-suite are executed.
+  --test mysuite.mytest            # Match test 'mytest' in suite 'mysuite'.
+  --test root.sub.test             # Match test 'test' in suite 'sub' in suite 'root'.
+  --test *.sub.test                # Match test 'test' in suite 'sub' anywhere.
 
-::
+Notice that when the given name includes a suite name, it must match the whole
+suite name starting from the root suite. Using a wildcard as in the last example
+above allows matching tests with a parent suite anywhere.
 
-  --suite parent.child
-  --suite myhouse.myhousemusic --test jack*
-
-Selecting individual test cases with the :option:`--test` option is very
-practical when creating test cases, but quite limited when running tests
-automatically. The :option:`--suite` option can be useful in that
-case, but in general, selecting test cases by tag names is more
-flexible.
+Using the :option:`--test` option is convenient when only a few tests needs
+to be selected. A common use case is running just the test that is currently
+being worked on. If a bigger number of tests needs to be selected,
+it is typically easier to select them `by suite names`_ or `by tag names`_.
 
 When `executing tasks`_, it is possible to use the :option:`--task` option
 as an alias for :option:`--test`.
+
+By suite names
+~~~~~~~~~~~~~~
+
+Tests can be selected also by suite names with the :option:`--suite (-s)`
+option that selects all tests in matching suites. Similarly
+as with :option:`--test`, given names are case, space and underscore
+insensitive and support `simple patterns`_. To pinpoint a suite
+more precisely, it is possible to prefix the name with the parent suite
+name::
+
+  --suite Example                  # Match only suites with name 'Example'.
+  --suite example*                 # Match suites starting with 'example'.
+  --suite first --suite second     # Match suites with name 'first' or 'second'.
+  --suite root.child               # Match suite 'child' in root suite 'root'.
+  --suite *.parent.child           # Match suite 'child' with parent 'parent' anywhere.
+
+If the name contains a parent suite name, it must match the whole suite name
+the same way as with :option:`--test`. Using a wildcard as in the last example
+above allows matching suites with a parent suite anywhere.
+
+.. note:: Prior to Robot Framework 7.0, :option:`--suite` with a parent suite
+          did not need to match the whole suite name. For example, `parent.child`
+          would match suite `child` with parent `parent` anywhere. The name must
+          be prefixed with a wildcard if this behavior is desired nowadays.
+
+If both :option:`--suite` and :option:`--test` options are used, only the
+specified tests in specified suites are selected::
+
+  --suite mysuite --test mytest    # Match test 'mytest' if its inside suite 'mysuite'.
+
+Using the :option:`--suite` option is more or less the same as executing
+the appropriate suite file or directory directly. The main difference is
+that if a file or directory is run directly, possible higher level
+`suite initialization files`_ are ignored::
+
+  # Root suite is 'Tests' and its possible initialization file is used.
+  robot --suite example path/to/tests
+
+  # Root suite is 'Example' and higher level initialization files are ignored.
+  robot path/to/tests/example.robot
+
+Prior to Robot Framework 6.1, files not matching the :option:`--suite` option
+were not parsed at all for performance reasons. This optimization was not
+possible anymore after suites got a new :setting:`Name` setting that can override
+the default suite name that is got from the file or directory name. New
+:option:`--parseinclude` option has been added to `explicitly select which
+files are parsed`__ if this kind of parsing optimization is needed.
+
+__ `Selecting files by name or path`_
 
 By tag names
 ~~~~~~~~~~~~
@@ -130,16 +273,25 @@ combining individual tags or patterns together::
    --exclude xxORyyORzz
    --include fooNOTbar
 
-Starting from RF 5.0, it is also possible to use the reserved
-tag `robot:exclude` to achieve
-the same effect as with using the `--exclude` option:
+Another way to exclude tests by tags is using the `robot:exclude` `reserved tag`__.
+This tag can also be set using a variable, which allows excluding test
+dynamically during execution.
 
 .. sourcecode:: robotframework
 
+   *** Variables ***
+   ${EXCLUDE}        robot:exclude
+
    *** Test Cases ***
-   Example
+   Literal
+      [Documentation]    Unconditionally excluded.
       [Tags]    robot:exclude
-      Fail      This is not executed
+      Log    This is not executed
+
+   As variable
+      [Documentation]    Excluded unless ${EXCLUDE} is set to a different value.
+      [Tags]    ${EXCLUDE}
+      Log    This is not executed by default
 
 Selecting test cases by tags is a very flexible mechanism and allows
 many interesting possibilities:
@@ -156,6 +308,29 @@ many interesting possibilities:
   after executing all test cases, a separate report containing only
   the tests for a certain sprint can be generated (for example, `rebot
   --include sprint-42 output.xml`).
+
+Options :option:`--include` and :option:`--exclude` can be used in combination
+with :option:`--suite` and :option:`--test` discussed in the previous section.
+In that case tests that are selected must match all selection criteria::
+
+  --suite example --include tag    # Match test if it is in suite 'example' and has tag 'tag'.
+  --suite example --exclude tag    # Match test if it is in suite 'example' and does not have tag 'tag'.
+  --test ex* --include tag         # Match test if its name starts with 'ex' and it has tag 'tag'.
+  --test ex* --exclude tag         # Match test if its name starts with 'ex' and it does not have tag 'tag'.
+
+.. note:: `robot:exclude` is new in Robot Framework 5.0.
+
+.. note:: Using variables with `robot:exclude` is new in Robot Framework 7.2.
+          Using variables with tags matched against :option:`--include` and
+          :option:`--exclude` is not supported.
+
+.. note:: In Robot Framework 7.0 :option:`--include` and :option:`--test` were cumulative
+          and selected tests needed to match only either of these options. That behavior
+          caused `backwards incompatibility problems`__ and it was reverted already in
+          Robot Framework 7.0.1.
+
+__ `Reserved tags`_
+__ https://github.com/robotframework/robotframework/issues/5023
 
 Re-executing failed test cases
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -185,7 +360,7 @@ same as not specifying this option at all.
          using the :option:`--merge` command line option.
 
 __ `When no tests match selection`_
-__ `Merging outputs`_
+__ `Merging results`_
 
 Re-executing failed test suites
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -208,7 +383,7 @@ When no tests match selection
 By default when no tests match the selection criteria test execution fails
 with an error like::
 
-    [ ERROR ] Suite 'Example' with includes 'xxx' contains no test cases.
+    [ ERROR ] Suite 'Example' contains no tests matching tag 'xxx'.
 
 Because no outputs are generated, this behavior can be problematic if tests
 are executed and results processed automatically. Luckily a command line
@@ -233,23 +408,20 @@ running tests.
 Setting metadata
 ----------------
 
-Setting the name
-~~~~~~~~~~~~~~~~
+Setting suite name
+~~~~~~~~~~~~~~~~~~
 
-When Robot Framework parses test data, `test suite names are created
-from file and directory names`__. The name of the top-level test suite
+When Robot Framework parses test data, `suite names`__ are created
+from file and directory names. The name of the top-level test suite
 can, however, be overridden with the command line option
-:option:`--name (-N)`.
+:option:`--name (-N)`::
 
-.. note:: Prior to Robot Framework 3.1, underscores in the value were
-          converted to spaces. Nowadays values containing spaces need
-          to be escaped or quoted like, for example, `--name "My example"`.
+    robot --name "Custom name" tests.robot
 
-__ `Test suite name and documentation`_
+__ `Suite name`_
 
-
-Setting the documentation
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Setting suite documentation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In addition to `defining documentation in the test data`__, documentation
 of the top-level suite can be given from the command line with the
@@ -271,12 +443,12 @@ Examples::
           Prior to Robot Framework 3.1, underscores in documentation were
           converted to spaces same way as with the :option:`--name` option.
 
-__ `Test suite name and documentation`_
+__ `Suite documentation`_
 
-Setting free metadata
-~~~~~~~~~~~~~~~~~~~~~
+Setting free suite metadata
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-`Free test suite metadata`_ may also be given from the command line with the
+`Free suite metadata`_ may also be given from the command line with the
 option :option:`--metadata (-M)`. The argument must be in the format
 `name:value`, where `name` the name of the metadata to set and
 `value` is its value. The value can contain simple `HTML formatting`_ and
@@ -301,8 +473,8 @@ Examples::
           Prior to Robot Framework 3.1, underscores in the value were
           converted to spaces same way as with the :option:`--name` option.
 
-Setting tags
-~~~~~~~~~~~~
+Setting test tags
+~~~~~~~~~~~~~~~~~
 
 The command line option :option:`--settag (-G)` can be used to set
 the given tag to all executed test cases. This option may be used
@@ -389,7 +561,7 @@ in `sys.path`__
 attribute. This list can be updated dynamically during execution, and changes
 are taken into account next time when something is imported.
 
-__ http://docs.python.org/library/sys.html#sys.path
+__ https://docs.python.org/library/sys.html#sys.path
 
 
 Setting variables
@@ -407,7 +579,7 @@ illustrate how to use these options::
   --variablefile myvars.py:possible:arguments:here
   --variable ENVIRONMENT:Windows --variablefile c:\resources\windows.py
 
-__ `Setting variables in command line`_
+__ `Command line variables`_
 
 Dry run
 -------
@@ -472,9 +644,10 @@ Examples::
     robot --randomize tests my_test.robot
     robot --randomize all:12345 path/to/tests
 
-__ `Free test suite metadata`_
+__ `Free suite metadata`_
 
 .. _pre-run modifier:
+.. _pre-run modifiers:
 
 Programmatic modification of test data
 --------------------------------------
@@ -521,12 +694,17 @@ executed test suite and test cases. Most importantly, options related to
 use options like :option:`--include` also with possible dynamically added
 tests.
 
-.. tip:: Modifiers are taken into use from the command line exactly the same
-         way as listeners_. See the `Taking listeners into use`_ section for
-         more information and examples.
+Another way to modify tests is using the `listener version 3`_ interface.
+Modifying the `data` argument passed to the `start_suite` listener method
+when it is called for the first time has in practice the same effect as using
+a pre-run modifier. The main difference is that `--include/--exclude` and other
+such options do not have an effect to the added tests. The main benefit of using
+listeners is that they allow making modifications dynamically based on what
+happens during the execution.
 
-.. note:: Prior to Robot Framework 3.2 pre-run modifiers were executed
-          after other configuration.
+.. tip:: Modifiers are taken into use from the command line exactly the same
+         way as listeners_. See the `Registering listeners from command line`_
+         section for more information and examples.
 
 __ `Specifying library to import`_
 __ `Supported conversions`_
@@ -553,9 +731,6 @@ the file is in the `module search path`_, it could be used like this::
 
     # Specify the modifier as a name. Run every third test, starting from the second.
     robot --prerunmodifier SelectEveryXthTest:3:1 tests.robot
-
-.. note:: Argument conversion based on type hints like `x: int` in the above
-          example is new in Robot Framework 4.0 and requires Python 3.
 
 Example: Exclude tests by name
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -605,18 +780,18 @@ disabled, for example, as follows::
 Controlling console output
 --------------------------
 
-There are various command line options to control how test execution is
-reported on the console.
+There are various command line options to control how execution is reported
+on the console.
 
-Console output type
-~~~~~~~~~~~~~~~~~~~
+Built-in console loggers
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-The overall console output type is set with the :option:`--console` option.
-It supports the following case-insensitive values:
+Robot Framework has several built-in console loggers that provide output on
+different verbosity levels. The logger to use can selected with the
+:option:`--console` option that supports the following case-insensitive values:
 
 `verbose`
-    Every test suite and test case is reported individually. This is
-    the default.
+    Every suite and test is reported individually. This is the default.
 
 `dotted`
     Only show `.` for passed test, `F` for failed tests, `s` for skipped
@@ -629,8 +804,7 @@ It supports the following case-insensitive values:
     No output except for `errors and warnings`_.
 
 `none`
-    No output whatsoever. Useful when creating a custom output using,
-    for example, listeners_.
+    No output whatsoever.
 
 __ `Stopping test execution gracefully`_
 
@@ -642,11 +816,134 @@ Examples::
     robot --console quiet tests.robot
     robot --dotted tests.robot
 
+Custom console loggers
+~~~~~~~~~~~~~~~~~~~~~~
+
+In addition to the built-in values listed above, the :option:`--console` option
+accepts a path or name of a custom console logger class or module. The argument
+format is the same as with :option:`--listener`: a path to a Python file, a
+module name, or a dotted class name, with optional arguments separated by colons.
+
+Examples::
+
+    robot --console path/to/myconsole.py tests.robot
+    robot --console MyConsole --pythonpath /path/to/consoles tests.robot
+    robot --console CustomConsole.py:arg1:arg2 tests.robot
+
+Custom console loggers receive the same `listener method calls`__ as
+normal listeners. Only methods that are implemented are called — missing methods
+are silently ignored. This means a minimal console only needs to implement the
+hooks it is interested in.
+
+__ `Listener interface`_
+
+.. note:: Console loggers should treat the ``data`` and ``result`` objects passed
+   to their methods as read-only. Currently live objects are passed so modifications
+   would take effect, but this behaviour may change without notice. Use the
+   `Listener interface`_ if you need to legitimately modify them.
+
+   Support for custom console loggers is new in Robot Framework 7.5.
+
+Example
+'''''''
+
+The following example shows a custom console that provides a compact progress
+view with elapsed time and a running pass/fail counter — useful in CI pipelines
+or when the verbose output is too noisy but `dotted` does not provide enough
+context:
+
+.. sourcecode:: python
+
+    import time
+
+
+    class ProgressConsole:
+
+        def __init__(self):
+            self.passed = 0
+            self.failed = 0
+            self.skipped = 0
+            self.start_time = None
+
+        def start_suite(self, data, result):
+            if self.start_time is None:
+                self.start_time = time.time()
+
+        def end_test(self, data, result):
+            if result.passed:
+                self.passed += 1
+            elif result.failed:
+                self.failed += 1
+            else:
+                self.skipped += 1
+            elapsed = time.time() - self.start_time
+            total = self.passed + self.failed + self.skipped
+            status = '✓' if result.passed else '✗' if result.failed else '-'
+            print(
+                f" {status} [{elapsed:>6.1f}s] {result.name}  "
+                f"({total} done, {self.failed} failed)"
+            )
+
+        def result_file(self, kind, path):
+            print(f"{kind}:  {path}")
+
+        def close(self):
+            elapsed = time.time() - self.start_time
+            total = self.passed + self.failed + self.skipped
+            print(
+                f"\n{total} tests in {elapsed:.1f}s: "
+                f"{self.passed} passed, {self.failed} failed, "
+                f"{self.skipped} skipped"
+            )
+
+Programmatic usage
+''''''''''''''''''
+
+When using the `programmatic API`__, the ``console`` option also accepts
+a pre-instantiated Python object:
+
+.. sourcecode:: python
+
+    from robot import run
+
+    run('tests.robot', console=ProgressConsole())
+
+__ https://robot-framework.readthedocs.io/en/master/autodoc/robot.html#module-robot.run
+
+Extending built-in console loggers
+''''''''''''''''''''''''''''''''''
+
+Custom console loggers can be implemented so that they extend the `built-in console
+loggers`_. The built-in loggers are exposed via the `robot.api.console`__ module
+and their API docs provide more information.
+
+Here is a very simple example of custom console logger that extends the
+`DottedConsole` and disables writing result file paths to the console:
+
+.. sourcecode:: python
+
+    from robot.api.console import DottedConsole
+
+
+    class DottedWithoutPaths(DottedConsole):
+
+        def result_file(self, kind, path):
+            pass
+
+__ https://robot-framework.readthedocs.io/en/master/autodoc/robot.api.html#module-robot.api.console
+
+Configuring custom console loggers
+''''''''''''''''''''''''''''''''''
+
+Custom console loggers must handle their configuration on their own. Options like
+:option:`--consolewidth` discussed in the subsequent sections only affect the
+built-in console loggers.
+
 Console width
 ~~~~~~~~~~~~~
 
-The width of the test execution output in the console can be set using
-the option :option:`--consolewidth (-W)`. The default width is 78 characters.
+The width of console output can be set using the option :option:`--consolewidth (-W)`.
+The default width is 78 characters.
 
 .. tip:: On many UNIX-like machines you can use handy `$COLUMNS`
          environment variable like `--consolewidth $COLUMNS`.
@@ -656,8 +953,8 @@ Console colors
 
 The :option:`--consolecolors (-C)` option is used to control whether
 colors should be used in the console output. Colors are implemented
-using `ANSI colors`__ except on Windows where, by default, Windows
-APIs are used instead.
+using `ANSI escape codes`__ with a backup mechanism for older Windows
+versions that do not support ANSI codes.
 
 This option supports the following case-insensitive values:
 
@@ -669,13 +966,37 @@ This option supports the following case-insensitive values:
     Colors are used also when outputs are redirected. Does not work on Windows.
 
 `ansi`
-    Same as `on` but uses ANSI colors also on Windows. Useful, for example,
-    when redirecting output to a program that understands ANSI colors.
+    Same as `on` but forces ANSI codes to be used unconditionally on Windows.
 
 `off`
     Colors are disabled.
 
-__ http://en.wikipedia.org/wiki/ANSI_escape_code
+__ https://en.wikipedia.org/wiki/ANSI_escape_code
+
+.. note:: Using ANSI codes on Windows by default is new in Robot Framework 7.1.
+
+Console links
+~~~~~~~~~~~~~
+
+Result file paths written to the console at the end of the execution are, by default,
+hyperlinks. This behavior can be controlled with the :option:`--consolelinks` option
+that accepts the following case-insensitive values:
+
+`auto`
+    Paths are converted to links when `console colors`_ are enabled. This is the default.
+
+`off`
+    Links are unconditionally disabled.
+
+The hyperlink support depends also on the console that is used, but nowadays
+the `support is pretty good`__. The commonly used `Windows Console`__ does not
+support links, though, but the newer `Windows Terminal`__ does.
+
+.. note:: Hyperlink support is new in Robot Framework 7.1.
+
+__ https://github.com/Alhadis/OSC8-Adoption
+__ https://en.wikipedia.org/wiki/Windows_Console
+__ https://en.wikipedia.org/wiki/Windows_Terminal
 
 Console markers
 ~~~~~~~~~~~~~~~
@@ -699,7 +1020,7 @@ case-insensitive values:
 `off`
     Markers are disabled.
 
-__ `Console output type`_
+__ `Built-in console loggers`_
 
 Setting listeners
 -----------------

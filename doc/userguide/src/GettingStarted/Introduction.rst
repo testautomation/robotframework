@@ -10,11 +10,11 @@ requires using different technologies and interfaces.
 The framework has a rich ecosystem around it consisting of various generic
 libraries and tools that are developed as separate projects. For more
 information about Robot Framework and the ecosystem, see
-http://robotframework.org.
+https://robotframework.org.
 
 Robot Framework is open source software released under the `Apache License
 2.0`_. Its development is sponsored by the `Robot Framework Foundation
-<http://robotframework.org/foundation>`_.
+<https://robotframework.org/foundation>`_.
 
 .. note:: The official RPA support was added in Robot Framework 3.1.
           This User Guide still talks mainly about creating tests, test data,
@@ -114,39 +114,26 @@ Getting more information
 Project pages
 ~~~~~~~~~~~~~
 
-The number one place to find more information about Robot Framework
-and the rich ecosystem around it is http://robotframework.org.
+The number one place where to find more information about Robot Framework
+and the rich ecosystem around it is https://robotframework.org.
 Robot Framework itself is hosted on GitHub__.
 
 __ https://github.com/robotframework/robotframework
 
-Mailing lists
-~~~~~~~~~~~~~
+Guides
+~~~~~~
 
-There are several Robot Framework mailing lists where to ask and
-search for more information. The mailing list archives are open for
-everyone (including the search engines) and everyone can also join
-these lists freely. Only list members can send mails, though, and to
-prevent spam new users are moderated which means that it might take a
-little time before your first message goes through.  Do not be afraid
-to send question to mailing lists but remember `How To Ask Questions
-The Smart Way`__.
+The official `Robot Framework Guides`__ cover topics like getting started,
+using various libraries, IDE configuration, and so on.
 
-robotframework-users__
-   General discussion about all Robot Framework related
-   issues. Questions and problems can be sent to this list. Used also
-   for information sharing for all users.
+__ https://docs.robotframework.org/docs
 
-robotframework-announce__
-    An announcements-only mailing list where only moderators can send
-    messages. All announcements are sent also to the
-    robotframework-users mailing list so there is no need to join both
-    lists.
+Support forums
+~~~~~~~~~~~~~~
 
-robotframework-devel__
-   Discussion about Robot Framework development.
+The main support forums where to ask questions related to Robot Framework,
+announce new releases and just discuss with fellow community members are
+Slack__ and Forum__.
 
-__ http://www.catb.org/~esr/faqs/smart-questions.html
-__ http://groups.google.com/group/robotframework-users
-__ http://groups.google.com/group/robotframework-announce
-__ http://groups.google.com/group/robotframework-devel
+__ https://slack.robotframework.org
+__ https://forum.robotframework.org

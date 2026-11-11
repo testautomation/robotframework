@@ -29,3 +29,8 @@ __pycache__
 .classpath
 .settings
 .jython_cache
+.mypy_cache/
+node_modules
+.cache/
+.parcel-cache/
+.claude/

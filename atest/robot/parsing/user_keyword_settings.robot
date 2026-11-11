@@ -5,12 +5,12 @@ Resource          atest_resource.robot
 *** Test Cases ***
 Name
     ${tc} =    Check Test Case    Normal name
-    Should Be Equal  ${tc.kws[0].name}    Normal name
+    Should Be Equal  ${tc[0].full_name}    Normal name
 
 Names are not formatted
     ${tc} =    Check Test Case    Names are not formatted
-    FOR    ${kw}    IN    @{tc.kws}
-        Should Be Equal    ${kw.name}  user_keyword nameS _are_not_ FORmatted
+    FOR    ${kw}    IN    @{tc.body}
+        Should Be Equal    ${kw.full_name}  user_keyword nameS _are_not_ FORmatted
     END
 
 No documentation
@@ -20,7 +20,7 @@ Documentation
     Verify Documentation    Documentation for this user keyword
 
 Documentation in multiple columns
-    Verify Documentation    Documentation for this user keyword in multiple columns
+    Verify Documentation    Documentation${SPACE * 4}for this user keyword${SPACE*10}in multiple columns
 
 Documentation in multiple rows
     Verify Documentation    1st line is shortdoc.
@@ -43,19 +43,19 @@ Documentation with escaping
 Arguments
     [Documentation]    Tested more thoroughly elsewhere.
     ${tc} =    Check Test Case    ${TEST NAME}
-    Check Log Message    ${tc.kws[0].kws[0].msgs[0]}    mandatory
-    Check Log Message    ${tc.kws[0].kws[0].msgs[1]}    default
-    Should Be True       ${tc.kws[0].args} == ('mandatory',)
-    Check Log Message    ${tc.kws[1].kws[0].msgs[0]}    1
-    Check Log Message    ${tc.kws[1].kws[0].msgs[1]}    2
-    Should Be True       ${tc.kws[1].args} == ('1', '2')
-    Check Log Message    ${tc.kws[2].kws[0].msgs[0]}    1
-    Check Log Message    ${tc.kws[2].kws[0].msgs[1]}    2
-    Check Log Message    ${tc.kws[2].kws[0].msgs[2]}    3
-    Check Log Message    ${tc.kws[2].kws[0].msgs[3]}    4
-    Check Log Message    ${tc.kws[2].kws[0].msgs[4]}    5
-    Check Log Message    ${tc.kws[2].kws[0].msgs[5]}    key=6
-    Should Be True       ${tc.kws[2].args} == ('\${1}', '\${2}', '\${3}', '\${4}', '\${5}', 'key=\${6}')
+    Check Log Message    ${tc[0, 0, 0]}    mandatory
+    Check Log Message    ${tc[0, 0, 1]}    default
+    Should Be True       ${tc[0].args} == ('mandatory',)
+    Check Log Message    ${tc[1, 0, 0]}    1
+    Check Log Message    ${tc[1, 0, 1]}    2
+    Should Be True       ${tc[1].args} == ('1', '2')
+    Check Log Message    ${tc[2, 0, 0]}    1
+    Check Log Message    ${tc[2, 0, 1]}    2
+    Check Log Message    ${tc[2, 0, 2]}    3
+    Check Log Message    ${tc[2, 0, 3]}    4
+    Check Log Message    ${tc[2, 0, 4]}    5
+    Check Log Message    ${tc[2, 0, 5]}    key=6
+    Should Be True       ${tc[2].args} == ('\${1}', '\${2}', '\${3}', '\${4}', '\${5}', 'key=\${6}')
 
 Teardown
     Verify Teardown    Keyword teardown
@@ -67,16 +67,33 @@ Teardown with escaping
     Verify Teardown    \${notvar} is not a variable
 
 Return
-    Check Test Case    ${TEST NAME}
+    [Documentation]    [Return] is deprecated. In parsing it is transformed to RETURN.
+    ${tc} =    Check Test Case    ${TEST NAME}
+    Should Be Equal    ${tc[0, 0].type}      RETURN
+    Should Be Equal    ${tc[0, 0].values}    ${{('Return value',)}}
+    Error in File    0    parsing/user_keyword_settings.robot    167
+    ...    The '[[]Return]' setting is deprecated. Use the 'RETURN' statement instead.    level=WARN
 
 Return using variables
-    Check Test Case    ${TEST NAME}
+    ${tc} =    Check Test Case    ${TEST NAME}
+    Should Be Equal    ${tc[0, 1].type}      RETURN
+    Should Be Equal    ${tc[0, 1].values}    ${{('\${ret}',)}}
+    Error in File    1    parsing/user_keyword_settings.robot    171
+    ...    The '[[]Return]' setting is deprecated. Use the 'RETURN' statement instead.    level=WARN
 
 Return multiple
-    Check Test Case    ${TEST NAME}
+    ${tc} =    Check Test Case    ${TEST NAME}
+    Should Be Equal    ${tc[0, 1].type}      RETURN
+    Should Be Equal    ${tc[0, 1].values}    ${{('\${arg1}', '+', '\${arg2}', '=', '\${result}')}}
+    Error in File    2    parsing/user_keyword_settings.robot    176
+    ...    The '[[]Return]' setting is deprecated. Use the 'RETURN' statement instead.    level=WARN
 
 Return with escaping
-    Check Test Case    ${TEST NAME}
+    ${tc} =    Check Test Case    ${TEST NAME}
+    Should Be Equal    ${tc[0, 0].type}      RETURN
+    Should Be Equal    ${tc[0, 0].values}    ${{('\\\${XXX}', 'c:\\\\temp', '\\', '\\\\')}}
+    Error in File    3    parsing/user_keyword_settings.robot    179
+    ...    The '[[]Return]' setting is deprecated. Use the 'RETURN' statement instead.    level=WARN
 
 Timeout
     Verify Timeout    2 minutes 3 seconds
@@ -89,41 +106,36 @@ Invalid timeout
 
 Multiple settings
     Verify Documentation    Documentation for a user keyword
-    Verify Teardown   Teardown World
-    Verify Timeout  6 minutes
+    Verify Teardown         Teardown World
+    Verify Timeout          6 minutes
 
 Invalid setting
     Check Test Case    ${TEST NAME}
-    Error In File    0    parsing/user_keyword_settings.robot    195
-    ...    Non-existing setting 'Invalid Setting'.
-    Error In File    1    parsing/user_keyword_settings.robot    199
-    ...    Non-existing setting 'invalid'.
+
+Setting not valid with user keywords
+    Check Test Case    ${TEST NAME}
 
 Small typo should provide recommendation
     Check Test Case    ${TEST NAME}
-    Error In File    2    parsing/user_keyword_settings.robot    203
-    ...    SEPARATOR=\n
-    ...    Non-existing setting 'Doc Umentation'. Did you mean:
-    ...    ${SPACE*4}Documentation
 
-Invalid empty line continuation in arguments should throw an error    
-    Error in File    3   parsing/user_keyword_settings.robot     206
-    ...    Creating keyword 'Invalid empty line continuation in arguments should throw an error' failed: Invalid argument specification: Invalid argument syntax ''.
-
+Invalid empty line continuation in arguments should throw an error
+    Error in File    4    parsing/user_keyword_settings.robot    214
+    ...    Creating keyword 'Invalid empty line continuation in arguments should throw an error' failed:
+    ...    Invalid argument specification: Invalid argument syntax ''.
 
 *** Keywords ***
 Verify Documentation
     [Arguments]    ${doc}    ${test}=${TEST NAME}
     ${tc} =    Check Test Case    ${test}
-    Should Be Equal    ${tc.kws[0].doc}    ${doc}
+    Should Be Equal    ${tc[0].doc}    ${doc}
 
 Verify Teardown
     [Arguments]    ${message}
     ${tc} =    Check Test Case    ${TEST NAME}
-    Should Be Equal    ${tc.kws[0].teardown.name}    BuiltIn.Log
-    Check Log Message    ${tc.kws[0].teardown.msgs[0]}    ${message}
+    Should Be Equal      ${tc[0].teardown.full_name}    BuiltIn.Log
+    Check Log Message    ${tc[0].teardown[0]}           ${message}
 
 Verify Timeout
     [Arguments]    ${timeout}
     ${tc} =    Check Test Case    ${TEST NAME}
-    Should Be Equal    ${tc.kws[0].timeout}    ${timeout}
+    Should Be Equal    ${tc[0].timeout}    ${timeout}

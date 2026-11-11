@@ -1,9 +1,15 @@
 *** Settings ***
 Library              OperatingSystem
+Library              embedded_args.py
+Variables            variable.py
 
 *** Variables ***
 @{NEEDS ESCAPING}    c:\\temp\\foo    \${notvar}    ${42}
 ${FAIL KW}           Fail
+${VARIABLE}          value
+${VAR_MULTILINE}     SEPARATOR=\n
+...    foo
+...    bar
 
 *** Test Cases ***
 Run Keyword
@@ -48,7 +54,44 @@ Run Keyword In Multiple Levels And With UK
     Run Keyword    Run Keyword    Run Keyword    My UK    Run Keyword
     ...    My UK    My UK    My UK    Run Keyword    Fail    Expected Failure
 
-Run Keyword In For Loop
+With keyword accepting embedded arguments
+    Run Keyword    Embedded "arg"
+
+With library keyword accepting embedded arguments
+    Run Keyword    Embedded "arg" in library
+
+With keyword accepting embedded arguments as variables
+    Run Keyword    Embedded "${VARIABLE}"
+    Run Keyword    Embedded "${1}"
+    Run Keyword    Embedded "${VAR_MULTILINE}"
+
+With library keyword accepting embedded arguments as variables
+    Run Keyword    Embedded "${VARIABLE}" in library
+    Run Keyword    Embedded "${1}" in library
+    Run Keyword    Embedded "${VAR_MULTILINE}" in library
+
+With keyword accepting embedded arguments as variables containing objects
+    Run Keyword    Embedded "${OBJECT}"
+    Run Keyword    Embedded object "${OBJECT}"
+
+With library keyword accepting embedded arguments as variables containing objects
+    Run Keyword    Embedded "${OBJECT}" in library
+    Run Keyword    Embedded object "${OBJECT}" in library
+
+Embedded arguments matching only after replacing variables
+    VAR    ${arg}    "arg"
+    Run Keyword    Embedded ${arg}
+    Run Keyword    Embedded ${arg} in library
+
+Exact match after replacing variables has higher precedence than embedded arguments
+    VAR    ${not}    not
+    Run Keyword    Embedded "${not}"
+    Run Keyword    Embedded "${{'NOT'}}" in library
+    VAR    ${not}    "not"
+    Run Keyword    Embedded ${not}
+    Run Keyword    Embedded ${not} in library
+
+Run Keyword In FOR Loop
     [Documentation]    FAIL Expected failure in For Loop
     FOR    ${kw}              ${arg1}                ${arg2}    IN
     ...    Log                hello from for loop    INFO
@@ -67,16 +110,16 @@ Run Keyword With Test Timeout Passing
     Run Keyword    Log    Timeout is not exceeded
 
 Run Keyword With Test Timeout Exceeded
-    [Documentation]    FAIL Test timeout 1 second 234 milliseconds exceeded.
-    [Timeout]    1234 milliseconds
+    [Documentation]    FAIL Test timeout 300 milliseconds exceeded.
+    [Timeout]    0.3 s
     Run Keyword    Log    Before Timeout
-    Run Keyword    Sleep    1.3s
+    Run Keyword    Sleep    5 s
 
 Run Keyword With KW Timeout Passing
     Run Keyword    Timeoutted UK Passing
 
 Run Keyword With KW Timeout Exceeded
-    [Documentation]    FAIL Keyword timeout 300 milliseconds exceeded.
+    [Documentation]    FAIL Keyword timeout 50 milliseconds exceeded.
     Run Keyword    Timeoutted UK Timeouting
 
 Run Keyword With Invalid Keyword Name
@@ -97,5 +140,15 @@ Timeoutted UK Passing
     No Operation
 
 Timeoutted UK Timeouting
-    [Timeout]    300 milliseconds
+    [Timeout]    50 milliseconds
     Sleep    1 second
+
+Embedded "${arg}"
+    Log    ${arg}
+
+Embedded object "${obj}"
+    Log    ${obj}
+    Should Be Equal    ${obj.name}    Robot
+
+Embedded "not"
+    Log    Nothing embedded in this user keyword!

@@ -1,5 +1,5 @@
-All command line options
-========================
+Command line options
+====================
 
 This appendix lists all the command line options that are available
 when `executing test cases`_  and when `post-processing outputs`_.
@@ -14,7 +14,11 @@ Command line options for test execution
 ---------------------------------------
 
   --rpa                   Turn on `generic automation`_ mode.
+  --language <lang>       Activate localization_. `lang` can be a name or a code
+                          of a `built-in language <Translations_>`__, or a path
+                          or a module name of a custom language file.
   -F, --extension <value>  `Parse only these files`_ when executing a directory.
+  -I, --parseinclude <pattern>  `Parse only matching files`_ when executing a directory.
   -N, --name <name>       `Sets the name`_ of the top-level test suite.
   -D, --doc <document>    `Sets the documentation`_ of the top-level test suite.
   -M, --metadata <name:value>  `Sets free metadata`_ for the top level test suite.
@@ -32,13 +36,14 @@ Command line options for test execution
   --skiponfailure <tag>   Tests having given tag will be `skipped`_ if they fail.
   -v, --variable <name:value>   Sets `individual variables`_.
   -V, --variablefile <path:args>  Sets variables using `variable files`_.
-  -d, --outputdir <dir>   Defines where to `create output files`_.
+  -d, --outputdir <dir>   Defines where to `create result files`_.
   -o, --output <file>     Sets the path to the generated `output file`_.
+  --legacyoutput          Creates output file in `Robot Framework 6.x compatible format`_.
   -l, --log <file>        Sets the path to the generated `log file`_.
   -r, --report <file>     Sets the path to the generated `report file`_.
   -x, --xunit <file>      Sets the path to the generated `xUnit compatible result file`_.
   -b, --debugfile <file>  A `debug file`_ that is written during execution.
-  -T, --timestampoutputs  `Adds a timestamp`_ to all output files.
+  -T, --timestampoutputs  `Adds a timestamp`_ to `result files`_ listed above.
   --splitlog              `Split log file`_ into smaller pieces that open in
                           browser transparently.
   --logtitle <title>      `Sets a title`_ for the generated test log.
@@ -78,11 +83,13 @@ Command line options for test execution
   --prerunmodifier <name:args>    Activate `programmatic modification of test data`_.
   --prerebotmodifier <name:args>  Activate `programmatic modification of results`_.
   --randomize <all|suites|tests|none>  `Randomizes`_ test execution order.
-  --console <verbose|dotted|quiet|none>  `Console output type`_.
+  --console <verbose|dotted|quiet|none|custom>  `Console output type`_.
+                          Also accepts `custom console loggers`_.
   --dotted                Shortcut for `--console dotted`.
   --quiet                 Shortcut for `--console quiet`.
   -W, --consolewidth <width>  `Sets the width`_ of the console output.
   -C, --consolecolors <auto|on|ansi|off>  `Specifies are colors`_ used on the console.
+  --consolelinks <auto|off>  Controls `making paths to results files hyperlinks <Console links_>`_.
   -K, --consolemarkers <auto|on|off>  Show `markers on the console`_ when top level
                                       keywords in a test case end.
   -P, --pythonpath <path>  Additional locations to add to the `module search path`_.
@@ -94,7 +101,7 @@ Command line options for post-processing outputs
 ------------------------------------------------
 
   --rpa                   Turn on `generic automation`_ mode.
-  -R, --merge             Changes result combining behavior to `merging <merging outputs_>`__.
+  -R, --merge             Changes result combining behavior to `merging <merging results_>`__.
   -N, --name <name>       `Sets the name`_ of the top level test suite.
   -D, --doc <document>    `Sets the documentation`_ of the top-level test suite.
   -M, --metadata <name:value>  `Sets free metadata`_ for the top-level test suite.
@@ -104,12 +111,13 @@ Command line options for post-processing outputs
   -s, --suite <name>      `Selects the test suites`_ by name.
   -i, --include <tag>     `Selects the test cases`_ by tag.
   -e, --exclude <tag>     `Selects the test cases`_ by tag.
-  -d, --outputdir <dir>   Defines where to `create output files`_.
+  -d, --outputdir <dir>   Defines where to `create result files`_.
   -o, --output <file>     Sets the path to the generated `output file`_.
+  --legacyoutput          Creates output file in `Robot Framework 6.x compatible format`_.
   -l, --log <file>        Sets the path to the generated `log file`_.
   -r, --report <file>     Sets the path to the generated `report file`_.
   -x, --xunit <file>      Sets the path to the generated `xUnit compatible result file`_.
-  -T, --timestampoutputs  `Adds a timestamp`_ to all output files.
+  -T, --timestampoutputs  `Adds a timestamp`_ to `result files`_ listed above.
   --splitlog              `Split log file`_ into smaller pieces that open in
                           browser transparently.
   --logtitle <title>      `Sets a title`_ for the generated test log.
@@ -139,21 +147,25 @@ Command line options for post-processing outputs
   --processemptysuite     Processes output files even if files contain
                           `empty test suites`_.
   --prerebotmodifier <name:args>  Activate `programmatic modification of results`_.
+  --console <verbose|quiet|none|custom>  `Controlling Rebot console output`_.
+                          Also accepts `custom console loggers`_.
+  --quiet                 Shortcut for `--console quiet`.
   -C, --consolecolors <auto|on|ansi|off>  `Specifies are colors`_ used on the console.
+  --consolelinks <auto|off>  Controls `making paths to results files hyperlinks <Console links_>`_.
   -P, --pythonpath <path>   Additional locations to add to the `module search path`_.
   -A, --argumentfile <path>   A text file to `read more arguments`_ from.
   -h, --help              Prints `usage instructions`_.
   --version               Prints the `version information`_.
 
-
 .. _generic automation: `Task execution`_
 .. _Parse only these files: `Selecting files to parse`_
-.. _Sets the name: `Setting the name`_
-.. _Sets the documentation: `Setting the documentation`_
-.. _Sets free metadata: `Setting free metadata`_
-.. _Sets the tag(s): `Setting tags`_
-.. _Selects the test cases by name: `By test suite and test case names`_
-.. _Selects the test suites: `Selects the test cases by name`_
+.. _Parse only matching files: `Selecting files to parse`_
+.. _Sets the name: `Setting suite name`_
+.. _Sets the documentation: `Setting suite documentation`_
+.. _Sets free metadata: `Setting free suite metadata`_
+.. _Sets the tag(s): `Setting test tags`_
+.. _Selects the test cases by name: `By test names`_
+.. _Selects the test suites: `By suite names`_
 .. _Selects failed test suites: `Re-executing failed test suites`_
 .. _Selects failed tests: `Re-executing failed test cases`_
 .. _Selects the test cases: `By tag names`_
@@ -162,10 +174,11 @@ Command line options for post-processing outputs
 .. _SkipTeardownOnExit: `Handling Teardowns`_
 .. _DryRun: `Dry run`_
 .. _Randomizes: `Randomizing execution order`_
-.. _individual variables: `Setting variables in command line`_
+.. _individual variables: `Command line variables`_
 
-.. _create output files: `Output directory`_
-.. _Adds a timestamp: `Timestamping output files`_
+.. _create result files: `Output directory`_
+.. _Robot Framework 6.x compatible format: `Legacy XML format`_
+.. _Adds a timestamp: `Timestamping result files`_
 .. _Split log file: `Splitting logs`_
 .. _Sets a title: `Setting titles`_
 .. _Sets background colors: `Setting background colors`_
@@ -182,6 +195,7 @@ Command line options for post-processing outputs
 .. _Sets a listener: `Setting listeners`_
 .. _test suites are empty: `When no tests match selection`_
 .. _empty test suites: `test suites are empty`_
+.. _Console output type: `Built-in console loggers`_
 .. _Sets the width: `Console width`_
 .. _Specifies are colors: `Console colors`_
 .. _markers on the console: `Console markers`_

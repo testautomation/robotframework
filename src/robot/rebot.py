@@ -32,18 +32,17 @@ that can be used programmatically. Other code is for internal usage.
 
 import sys
 
-# Allows running as a script. __name__ check needed with multiprocessing:
-# https://github.com/robotframework/robotframework/issues/1137
-if 'robot' not in sys.modules and __name__ == '__main__':
-    import pythonpathsetter
+if __name__ == "__main__" and "robot" not in sys.modules:
+    from pythonpathsetter import set_pythonpath
+
+    set_pythonpath()
 
 from robot.conf import RebotSettings
 from robot.errors import DataError
-from robot.reporting import ResultWriter
 from robot.output import LOGGER
-from robot.utils import Application
+from robot.reporting import ResultWriter
 from robot.run import RobotFramework
-
+from robot.utils import Application
 
 USAGE = """Rebot -- Robot Framework report and log generator
 
@@ -124,7 +123,6 @@ Options
     --processemptysuite   Processes output also if the top level suite is
                           empty. Useful e.g. with --include/--exclude when it
                           is not an error that there are no matches.
-                          Use --skiponfailure when starting execution instead.
  -d --outputdir dir       Where to create output files. The default is the
                           directory where Rebot is run from and the given path
                           is considered relative to that unless it is absolute.
@@ -132,6 +130,8 @@ Options
                           specified. Given path, similarly as paths given to
                           --log, --report and --xunit, is relative to
                           --outputdir unless given as an absolute path.
+    --legacyoutput        Create XML output file in format compatible with
+                          Robot Framework 6.x and earlier.
  -l --log file            HTML log file. Can be disabled by giving a special
                           name `NONE`. Default: log.html
                           Examples: `--log mylog.html`, `-l none`
@@ -183,7 +183,6 @@ Options
                           pattern. Documentation is shown in `Test Details` and
                           also as a tooltip in `Statistics by Tag`. Pattern can
                           use `*`, `?` and `[]` as wildcards like --test.
-                          Documentation can contain formatting like --doc.
                           Examples: --tagdoc mytag:Example
                                     --tagdoc "owner-*:Original author"
     --tagstatlink pattern:link:title *  Add external links into `Statistics by
@@ -206,8 +205,8 @@ Options
                           all:     remove data from all keywords
                           passed:  remove data only from keywords in passed
                                    test cases and suites
-                          for:     remove passed iterations from for loops
-                          while:   remove passed iterations from while loops
+                          for:     remove passed iterations from FOR loops
+                          while:   remove passed iterations from WHILE loops
                           wuks:    remove all but the last failing keyword
                                    inside `BuiltIn.Wait Until Keyword Succeeds`
                           name:<pattern>:  remove data from keywords that match
@@ -257,11 +256,26 @@ Options
                           failures. Error codes are returned normally.
     --prerebotmodifier class *  Class to programmatically modify the result
                           model before creating outputs.
+    --console console     How to report on the console.
+                          Built-in consoles:
+                          verbose: show output file paths (default)
+                          quiet:   no output except for errors/warnings
+                          none:    no output whatsoever
+                          Other values are interpreted as a custom
+                          console class or module. Argument format is
+                          the same as with --listener.
+                          Examples: --console verbose
+                                    --console quiet
+                                    --console path/to/Console.py:arg
+    --quiet               Shortcut for `--console quiet`.
  -C --consolecolors auto|on|ansi|off  Use colors on console output or not.
                           auto: use colors when output not redirected (default)
                           on:   always use colors
                           ansi: like `on` but use ANSI colors also on Windows
                           off:  disable colors altogether
+    --consolelinks auto|off  Control making paths to results files hyperlinks.
+                          auto: use links when colors are enabled (default)
+                          off: disable links unconditionally
  -P --pythonpath path *   Additional locations to add to the module search path
                           that is used when importing Python based extensions.
  -A --argumentfile path *  Text file to read more arguments from. File can have
@@ -287,11 +301,9 @@ has precedence regardless of how many times options are used. For example,
 `--merge --merge --nomerge --nostatusrc --statusrc` would not activate the
 merge mode and would return a normal return code.
 
-Long option format is case-insensitive. For example, --SuiteStatLevel is
-equivalent to but easier to read than --suitestatlevel. Long options can
-also be shortened as long as they are unique. For example, `--logti Title`
-works while `--lo log.html` does not because the former matches only --logtitle
-but the latter matches both --log and --logtitle.
+Long option names are case and hyphen insensitive. For example, --TagStatLink
+and --tag-stat-link are equivalent to, but easier to read than, --tagstatlink.
+Long options can also be shortened as long as they are unique.
 
 Environment Variables
 =====================
@@ -305,6 +317,16 @@ ROBOT_SYSLOG_FILE         Path to a file where Robot Framework writes internal
 ROBOT_SYSLOG_LEVEL        Log level to use when writing to the syslog file.
                           Available levels are the same as for --loglevel
                           command line option and the default is INFO.
+
+Return Codes
+============
+
+0                         All tests passed.
+1-249                     Returned number of tests failed.
+250                       250 or more failures.
+251                       Help or version information printed.
+252                       Invalid data or command line options.
+255                       Unexpected internal error.
 
 Examples
 ========
@@ -325,23 +347,30 @@ $ python -m robot.rebot --name Combined outputs/*.xml
 class Rebot(RobotFramework):
 
     def __init__(self):
-        Application.__init__(self, USAGE, arg_limits=(1,), env_options='REBOT_OPTIONS',
-                             logger=LOGGER)
+        Application.__init__(
+            self,
+            USAGE,
+            arg_limits=(1,),
+            env_options="REBOT_OPTIONS",
+            logger=LOGGER,
+        )
 
     def main(self, datasources, **options):
         try:
             settings = RebotSettings(options)
-        except:
-            LOGGER.register_console_logger(stdout=options.get('stdout'),
-                                           stderr=options.get('stderr'))
+        except DataError:
+            LOGGER.register_console_logger(
+                stdout=options.get("stdout"),
+                stderr=options.get("stderr"),
+            )
             raise
-        LOGGER.register_console_logger(**settings.console_output_config)
         if settings.pythonpath:
             sys.path = settings.pythonpath + sys.path
+        LOGGER.register_console_logger(**settings.console_output_config)
         LOGGER.disable_message_cache()
         rc = ResultWriter(*datasources).write_results(settings)
         if rc < 0:
-            raise DataError('No outputs created.')
+            raise DataError("No outputs created.")
         return rc
 
 
@@ -392,16 +421,18 @@ def rebot(*outputs, **options):
         from robot import rebot
 
         rebot('path/to/output.xml')
+        rebot('o1.xml', 'o2.xml', name='Example', log=None, console='quiet')
         with open('stdout.txt', 'w') as stdout:
             rebot('o1.xml', 'o2.xml', name='Example', log=None, stdout=stdout)
 
     Equivalent command line usage::
 
         rebot path/to/output.xml
+        rebot --name Example --log NONE --console quiet o1.xml o2.xml
         rebot --name Example --log NONE o1.xml o2.xml > stdout.txt
     """
     return Rebot().execute(*outputs, **options)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     rebot_cli(sys.argv[1:])

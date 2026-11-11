@@ -1,21 +1,23 @@
 *** Variables ***
-${COUNTER}         ${0}
-${PASS MESSAGE}    -PASSED -ALL
-${FAIL MESSAGE}    -ALL +PASSED
-${REMOVED FOR MESSAGE}     -FOR -ALL
-${KEPT FOR MESSAGE}        +FOR -ALL
-${REMOVED WHILE MESSAGE}     -WHILE -ALL
-${KEPT WHILE MESSAGE}        +WHILE -ALL
-${REMOVED WUKS MESSAGE}    -WUKS -ALL
-${KEPT WUKS MESSAGE}       +WUKS -ALL
-${REMOVED BY NAME MESSAGE}    -BYNAME -ALL
-${KEPT BY NAME MESSAGE}    +BYNAME -ALL
+${COUNTER}                       ${0}
+${PASS MESSAGE}                  -PASSED -ALL
+${FAIL MESSAGE}                  -ALL +PASSED
+${REMOVED FOR MESSAGE}           -FOR -ALL
+${KEPT FOR MESSAGE}              +FOR -ALL
+${REMOVED WHILE MESSAGE}         -WHILE -ALL
+${KEPT WHILE MESSAGE}            +WHILE -ALL
+${REMOVED WUKS MESSAGE}          -WUKS -ALL
+${KEPT WUKS MESSAGE}             +WUKS -ALL
+${REMOVED BY NAME MESSAGE}       -BYNAME -ALL
+${KEPT BY NAME MESSAGE}          +BYNAME -ALL
 ${REMOVED BY PATTERN MESSAGE}    -BYPATTERN -ALL
-${KEPT BY PATTERN MESSAGE}    +BYPATTERN -ALL
+${KEPT BY PATTERN MESSAGE}       +BYPATTERN -ALL
 
-*** Test Case ***
+*** Test Cases ***
 Passing
+    [Setup]       Log    ${PASS MESSAGE}
     Log    ${PASS MESSAGE}
+    [Teardown]    Run Keywords    Log    ${PASS MESSAGE}    AND    Log    ${PASS MESSAGE}
 
 Failing
     [Documentation]    FAIL Message
@@ -123,7 +125,7 @@ My WUKS
 Remove By Name
     [Arguments]    ${whatever}=default
     Log    ${REMOVED BY NAME MESSAGE}
-    [Return]    ${whatever}
+    RETURN    ${whatever}
 
 Do not remove by name
     Remove By Name
@@ -132,7 +134,7 @@ Do not remove by name
 This should be removed
     [Arguments]    ${whatever}=default
     Log    ${REMOVED BY PATTERN MESSAGE}
-    [Return]    ${whatever}
+    RETURN    ${whatever}
 
 This should be removed also
     Log    ${REMOVED BY PATTERN MESSAGE}

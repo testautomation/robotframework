@@ -1,5 +1,7 @@
 from enum import Enum
-from typing import Any, List, Union
+from typing import Any, Dict, List, Literal, Tuple, Union
+
+from robot.api.types import Secret
 
 
 class UnknownType:
@@ -14,17 +16,17 @@ class Small(Enum):
 
 
 class ManySmall(Enum):
-    A = 'a'
-    B = 'b'
-    C = 'c'
-    D = 'd'
-    E = 'd'
-    F = 'e'
-    G = 'g'
-    H = 'h'
-    I = 'i'
-    J = 'j'
-    K = 'k'
+    A = "a"
+    B = "b"
+    C = "c"
+    D = "d"
+    E = "e"
+    F = "f"
+    G = "g"
+    H = "h"
+    I = "i"  # noqa: E741
+    J = "j"
+    K = "k"
 
 
 class Big(Enum):
@@ -42,11 +44,11 @@ def B_enum(small: Small, many_small: ManySmall, big: Big):
     pass
 
 
-def C_annotation_and_default(integer: int = 42, list_: list = None, enum: Small = None):
+def C_annotation_and_default(i: int = 42, t: tuple = (), e: Small = Small.one):
     pass
 
 
-def D_annotated_kw_only_args(*, kwo: int, with_default: str='value'):
+def D_annotated_kw_only_args(*, kwo: int, with_default: str = "value"):
     pass
 
 
@@ -58,8 +60,10 @@ def F_unknown_types(unknown: UnknownType, unrecognized: Ellipsis):
     pass
 
 
-def G_non_type_annotations(arg: 'One of the usages in PEP-3107',
-                           *varargs: 'But surely feels odd...'):
+def G_non_type_annotations(
+    arg: "One of the usages in PEP-3107",  # noqa: F722
+    *varargs: "But surely feels odd...",  # noqa: F722
+):
     pass
 
 
@@ -71,18 +75,40 @@ def I_union_from_typing(a: Union[int, str, Union[list, tuple]]):
     pass
 
 
-def J_union_from_typing_with_default(a: Union[int, str, Union[list, tuple]] = None):
+def J_union_from_typing_with_default(a: Union[int, str, Union[list, None]] = None):
     pass
+
+
+def K_nested(
+    a: List[int],
+    b: List[Union[int, float]],
+    c: Tuple[Tuple[UnknownType], Dict[str, Tuple[float]]],
+):
+    pass
+
+
+def L_iteral(
+    a: Literal["on", "off", "int"],
+    b: Literal[1, 2, 3],
+    c: Literal[Small.one, True, None],
+):
+    pass
+
+
+def M_secret(token: Secret) -> str:
+    return str(token.value)
 
 
 try:
-    exec('''
-def K_union_syntax(a: int | str | list | tuple):
+    exec(  # noqa: S102
+        """
+def X_union_syntax(a: int | str | list | tuple):
     pass
 
 
-def K_union_syntax_with_default(a: int | str | list | tuple = None):
+def Y_union_syntax_with_default(a: int | str | list | None = None):
     pass
-''')
-except TypeError:    # Python < 3.10
+"""
+    )
+except TypeError:  # Python < 3.10
     pass

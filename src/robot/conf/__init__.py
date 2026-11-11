@@ -24,4 +24,10 @@ are likely to be rewritten at some point to be more convenient to use.
 Instantiating them is not likely to change, though.
 """
 
-from .settings import RobotSettings, RebotSettings
+from .languages import (
+    Language as Language,
+    LanguageLike as LanguageLike,
+    Languages as Languages,
+    LanguagesLike as LanguagesLike,
+)
+from .settings import RebotSettings as RebotSettings, RobotSettings as RobotSettings

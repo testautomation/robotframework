@@ -5,7 +5,13 @@ function toggleSuite(suiteId) {
 }
 
 function toggleTest(testId) {
-    toggleElement(testId, ['keyword']);
+    var test = window.testdata.findLoaded(testId);
+    var autoExpand = test.status == "FAIL" || test.status == "SKIP";
+    var closed = $('#' + testId).children('.element-header').hasClass('closed');
+    if (autoExpand && closed)
+        expandFailed(test);
+    else
+        toggleElement(testId, ['keyword']);
 }
 
 function toggleKeyword(kwId) {
@@ -18,7 +24,8 @@ function toggleElement(elementId, childrenNames) {
     children.toggle(100, '', function () {
         element.children('.element-header').toggleClass('closed');
     });
-    populateChildren(elementId, children, childrenNames);
+    if (childrenNames)
+        populateChildren(elementId, children, childrenNames);
 }
 
 function populateChildren(elementId, childElement, childrenNames) {
@@ -79,7 +86,7 @@ function loadAndExpandElementIds(ids) {
 }
 
 function expandFailed(element) {
-    if (element.status == "FAIL") {
+    if (element.status == "FAIL" || (element.type == "test" && element.status == "SKIP")) {
         window.elementsToExpand = [element];
         window.expandDecider = function (e) {
             return e.status == "FAIL";

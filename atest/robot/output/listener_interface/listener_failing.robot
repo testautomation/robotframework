@@ -43,12 +43,11 @@ Listener errors should be reported
 
 Library listener errors should be reported
     FOR    ${index}    ${method}    IN ENUMERATE
-    ...    start_suite    start_test    start_keyword    log_message
+    ...    message    start_suite    start_test    start_keyword    log_message
     ...    end_keyword    end_test    end_suite
         Error should be reported in execution errors    ${index}    ${method}    failing_listener
     END
     Error should be reported in stderr    close    failing_listener
-    ...    Error in library 'LibraryWithFailingListener':
 
 Error should be reported in execution errors
     [Arguments]    ${index}    ${method}    ${listener}
@@ -58,9 +57,8 @@ Error should be reported in execution errors
     Check log message    ${ERRORS}[${index}]    ${error}    ERROR
 
 Error should be reported in stderr
-    [Arguments]    ${method}    ${listener}    @{prefix}
+    [Arguments]    ${method}    ${listener}
     ${error} =    Catenate
-    ...    @{prefix}
     ...    Calling method '${method}' of listener '${listener}' failed:
     ...    Expected failure in ${method}!
     Stderr Should Contain    [ ERROR ] ${error}

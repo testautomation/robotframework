@@ -24,20 +24,24 @@ Output Directory Should Be Empty
 
 Run Some Tests
     [Arguments]    ${options}=-l none -r none
-    ${result} =    Run Tests    -d ${CLI OUTDIR} ${options}   ${TEST FILE}    default options=    output=
+    ${result} =    Run Tests    -d ${CLI OUTDIR} ${options}   ${TEST FILE}    default options=    output=None
     Should Be Equal    ${result.rc}    ${0}
-    [Return]    ${result}
+    RETURN    ${result}
 
 Tests Should Pass Without Errors
     [Arguments]    ${options}    ${datasource}
     ${result} =    Run Tests    ${options}    ${datasource}
     Should Be Equal    ${SUITE.status}    PASS
     Should Be Empty    ${result.stderr}
-    [Return]    ${result}
+    RETURN    ${result}
 
 Run Should Fail
-    [Arguments]    ${options}    ${error}
-    ${result} =    Run Tests    ${options}    default options=    output=
+    [Arguments]    ${options}    ${error}    ${regexp}=False
+    ${result} =    Run Tests    ${options}    default options=    output=None
     Should Be Equal As Integers    ${result.rc}    252
     Should Be Empty    ${result.stdout}
-    Should Match Regexp    ${result.stderr}    ^\\[ .*ERROR.* \\] ${error}${USAGETIP}$
+    IF    ${regexp}
+        Should Match Regexp    ${result.stderr}    ^\\[ ERROR \\] ${error}${USAGETIP}$
+    ELSE
+        Should Be Equal    ${result.stderr}    [ ERROR ] ${error}${USAGETIP}
+    END

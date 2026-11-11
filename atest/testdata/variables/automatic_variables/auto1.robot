@@ -1,4 +1,4 @@
-*** Setting ***
+*** Settings ***
 Documentation     This is suite documentation. With ${VARIABLE}.
 Metadata          MeTa1    Value
 Metadata          meta2    ${VARIABLE}
@@ -12,15 +12,16 @@ Library           Collections
 Library           HelperLib.py    ${SUITE NAME}    ${SUITE DOCUMENTATION}
 ...               ${SUITE METADATA}    ${SUITE SOURCE}    ${OPTIONS}
 
-*** Variable ***
+*** Variables ***
 ${VARIABLE}          variable value
 ${EXP_SUITE_NAME}    Automatic Variables.Auto1
 ${EXP_SUITE_DOC}     This is suite documentation. With ${VARIABLE}.
 ${EXP_SUITE_META}    {'MeTa1': 'Value', 'meta2': '${VARIABLE}'}
-${EXP_SUITE_STATS}   17 tests, 15 passed, 2 failed
+${EXP_TEST_META}     {'TeSt1': 'Value', 'test2': '${VARIABLE}'}
+${EXP_SUITE_STATS}   19 tests, 17 passed, 2 failed
 @{LAST_TEST}         \&{OPTIONS}    PASS
 
-*** Test Case ***
+*** Test Cases ***
 Previous Test Variables Should Have Default Values
     Check Previous Test Variables
 
@@ -35,6 +36,25 @@ Test Documentation
     [Setup]       Should Be Equal    ${TEST DOCUMENTATION}    My doc.\nIn 2 lines! And with ${VARIABLE}!!
                   Should Be Equal    ${TEST DOCUMENTATION}    My doc.\nIn 2 lines! And with ${VARIABLE}!!
     [Teardown]    Should Be Equal    ${TEST DOCUMENTATION}    My doc.\nIn 2 lines! And with ${VARIABLE}!!
+
+Test Metadata
+    [Metadata]    TeSt1    Value
+    [Metadata]    test2    ${VARIABLE}
+    [Setup]    Test Metadata Should Be Correct    ${EXP_TEST_META}
+    Test Metadata Should Be Correct    ${EXP_TEST_META}
+    ${expected} =    Evaluate    ${EXP_TEST_META}
+    Should Be Equal    ${TEST METADATA}    ${expected}
+    ${result} =    Create Dictionary    &{TEST METADATA}
+    Should Be Equal    ${result}    ${expected}
+    [Teardown]    Test Metadata Should Be Correct    ${EXP_TEST_META}
+
+Modifying \&{TEST METADATA} does not affect actual metadata test has
+    [Documentation]    The variable is changed but not "real" metadata
+    [Metadata]    TeSt1    Value
+    Set To Dictionary    ${TEST METADATA}    Test1     not really set
+    Set To Dictionary    ${TEST METADATA}    NotSet    not really set
+    Test Metadata Should Be Correct
+    ...    {'TeSt1': 'not really set', 'NotSet': 'not really set'}
 
 Test Tags
     [Tags]    id-${42}    Hello, world!    ${VARIABLE}
@@ -77,7 +97,7 @@ Suite Variables Are Available At Import Time
     name        Automatic Variables.Auto1
     doc         This is suite documentation. With \${VARIABLE}.
     metadata    {'MeTa1': 'Value', 'meta2': '\${VARIABLE}'}
-    options     {'include': ['include this test'], 'exclude': ['exclude', 'e2'], 'skip': ['skip_me'], 'skip_on_failure': ['sof']}
+    options     {'rpa': False, 'include': ['include this test'], 'exclude': ['exclude', 'e2'], 'skip': ['skip_me'], 'skip_on_failure': ['sof'], 'console_width': 99}
 
 Suite Status And Suite Message Are Not Visible In Tests
     Variable Should Not Exist    $SUITE_STATUS
@@ -123,3 +143,5 @@ Previous Test Variables Should Have Correct Values When That Test Fails
             Should Contain    ${OPTIONS.${name}}     ${exp.upper()}
         END
     END
+    Should Be Equal    ${OPTIONS.console_width}    ${99}
+    Should Be Equal    ${OPTIONS.rpa}    ${False}

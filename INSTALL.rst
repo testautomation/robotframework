@@ -28,11 +28,13 @@ is having Python or its alternative implementation `PyPy <https://pypy.org>`_
 installed. Another recommended precondition is having the pip_ package manager
 available.
 
-Robot Framework requires Python 3.6 or newer. If you need to use Python 2,
+Robot Framework requires Python 3.8 or newer. The latest version that supports
+Python 3.6 and 3.7 is `Robot Framework 6.1.1`__. If you need to use Python 2,
 `Jython <http://jython.org>`_ or `IronPython <http://ironpython.net>`_,
 you can use `Robot Framework 4.1.3`__.
 
-__ https://github.com/robotframework/robotframework/tree/v4.1.3#readme
+__ https://github.com/robotframework/robotframework/blob/v6.1.1/INSTALL.rst
+__ https://github.com/robotframework/robotframework/blob/v4.1.3/INSTALL.rst
 
 Installing Python on Linux
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -45,10 +47,10 @@ Python version than the one provided by your distribution by default.
 To check what Python version you have installed, you can run `python --version`
 command in a terminal:
 
-.. sourcecode:: bash
+.. code:: bash
 
   $ python --version
-  Python 3.8.10
+  Python 3.10.13
 
 Notice that if your distribution provides also older Python 2, running `python`
 may use that. To use Python 3, you can use `python3` command or even more version
@@ -56,12 +58,12 @@ specific command like `python3.8`. You need to use these version specific varian
 also if you have multiple Python 3 versions installed and need to pinpoint which
 one to use:
 
-.. sourcecode:: bash
+.. code:: bash
 
-  $ python3.9 --version
-  Python 3.9.10
-  $ python3.10 --version
-  Python 3.10.2
+  $ python3.11 --version
+  Python 3.11.7
+  $ python3.12 --version
+  Python 3.12.1
 
 Installing Robot Framework directly under the system provided Python
 has a risk that possible problems can affect the whole Python installation
@@ -87,21 +89,21 @@ to select the `Add Python 3.x to PATH` checkbox on the first dialog.
 To make sure Python installation has been successful and Python has been
 added to `PATH`, you can open the command prompt and execute `python --version`:
 
-.. sourcecode:: batch
+.. code:: batch
 
   C:\>python --version
-  Python 3.9.4
+  Python 3.10.9
 
-If you install multiple Python versions on Windows, the Python that is used
+If you install multiple Python versions on Windows, the version that is used
 when you execute `python` is the one first in `PATH`. If you need to use others,
 the easiest way is using the `py launcher`__:
 
-.. sourcecode:: batch
+.. code:: batch
 
   C:\>py --version
-  Python 3.9.4
-  C:\>py -3.10 --version
-  Python 3.10.2
+  Python 3.10.9
+  C:\>py -3.12 --version
+  Python 3.12.1
 
 __ https://docs.python.org/3/using/windows.html
 __ https://docs.python.org/3/using/windows.html#windows-full
@@ -198,21 +200,21 @@ To make sure you have pip available, you can run `pip --version` or equivalent.
 
 Examples on Linux:
 
-.. sourcecode:: bash
+.. code:: bash
 
   $ pip --version
-  pip 20.2 from ... (python 3.8)
-  $ python3.10 -m pip --version
-  pip 20.2 from ... (python 3.10)
+  pip 23.2.1 from ... (python 3.10)
+  $ python3.12 -m pip --version
+  pip 23.3.1 from ... (python 3.12)
 
 Examples on Windows:
 
-.. sourcecode:: batch
+.. code:: batch
 
   C:\> pip --version
-  pip 20.2.2 from ... (python 3.9)
-  C:\> py -m 3.10 -m pip --version
-  pip 20.2.1 from ... (python 3.10)
+  pip 23.2.1 from ... (python 3.10)
+  C:\> py -m 3.12 -m pip --version
+  pip 23.3.2 from ... (python 3.12)
 
 In the subsequent sections pip is always run using the `pip` command. You may
 need to use some of the other approaches explained above in your environment.
@@ -227,7 +229,7 @@ shown below and pip_ documentation has more information and examples.
 
 __ PyPI_
 
-.. sourcecode:: bash
+.. code:: bash
 
     # Install the latest version (does not upgrade)
     pip install robotframework
@@ -239,10 +241,10 @@ __ PyPI_
     pip install --upgrade --pre robotframework
 
     # Install a specific version
-    pip install robotframework==5.0
+    pip install robotframework==7.0
 
     # Install separately downloaded package (no network connection needed)
-    pip install robotframework-5.0-py3-none-any.whl
+    pip install robotframework-7.0-py3-none-any.whl
 
     # Install latest (possibly unreleased) code directly from GitHub
     pip install https://github.com/robotframework/robotframework/archive/master.zip
@@ -257,13 +259,13 @@ Another installation alternative is getting Robot Framework source code
 and installing it using the provided `setup.py` script. This approach is
 recommended only if you do not have pip_ available for some reason.
 
-You can get the source code by downloading a source distribution as a zip
-package from PyPI_ and extracting it. An alternative is cloning the GitHub_
+You can get the source code by downloading a source distribution package
+from PyPI_ and extracting it. An alternative is cloning the GitHub_
 repository and checking out the needed release tag.
 
 Once you have the source code, you can install it with the following command:
 
-.. sourcecode:: bash
+.. code:: bash
 
    python setup.py install
 
@@ -278,10 +280,10 @@ Verifying installation
 To make sure that the correct Robot Framework version has been installed, run
 the following command:
 
-.. sourcecode:: bash
+.. code:: bash
 
    $ robot --version
-   Robot Framework 5.0 (Python 3.8.10 on linux)
+   Robot Framework 7.0 (Python 3.10.3 on linux)
 
 If running these commands fails with a message saying that the command is
 not found or recognized, a good first step is double-checking the PATH_
@@ -292,13 +294,21 @@ running `robot` will execute the one first in PATH_. To select explicitly,
 you can run `python -m robot` and substitute `python` with the right Python
 version.
 
-.. sourcecode:: bash
+.. code:: bash
 
-   $ python3.10 -m robot --version
-   Robot Framework 5.0 (Python 3.10.2 on linux)
+   $ python3.12 -m robot --version
+   Robot Framework 7.0 (Python 3.12.1 on linux)
 
-   C:\>py -3.10 -m robot --version
-   Robot Framework 5.0 (Python 3.10.3 on win32)
+   C:\>py -3.11 -m robot --version
+   Robot Framework 7.0 (Python 3.11.7 on win32)
+
+Dependencies
+------------
+
+Robot Framework core functionality has no mandatory dependencies other than
+Python and its standard library. Some individual features may require optional
+dependencies to be installed, though. What dependencies are needed is always
+explained in the relevant documentation.
 
 Virtual environments
 --------------------

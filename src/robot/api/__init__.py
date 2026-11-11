@@ -30,6 +30,15 @@ Currently exposed APIs are:
   reporting failures and other events. These exceptions can be imported also directly
   via :mod:`robot.api` like ``from robot.api import SkipExecution``.
 
+* :mod:`.interfaces` module containing optional base classes that can be used
+  when creating libraries and other extensions. New in Robot Framework 6.1.
+
+* :mod:`.console` module exposing built-in console loggers that external loggers
+  can extend. New in Robot Framework 7.5.
+
+* :mod:`.types` module with types exposed for libraries and other extensions.
+  New in Robot Framework 7.4.
+
 * :mod:`.parsing` module exposing the parsing APIs. This module is new in Robot
   Framework 4.0. Various parsing related functions and classes were exposed
   directly via :mod:`robot.api` already in Robot Framework 3.2, but they are
@@ -58,9 +67,20 @@ Currently exposed APIs are:
   returned by the :func:`~robot.result.resultbuilder.ExecutionResult` or
   an executed :class:`~robot.running.model.TestSuite`.
 
-All of the above names can be imported like::
+* :class:`~robot.running.arguments.typeinfo.TypeInfo` class for parsing
+  type hints and converting values based on them. New in Robot Framework 7.0.
 
-    from robot.api import ApiName
+* :class:`~robot.conf.languages.Languages` and :class:`~robot.conf.languages.Language`
+  classes for external tools that need to work with different translations.
+  The latter is also the base class to use with custom translations.
+
+All of the above classes can be imported like::
+
+    from robot.api import ClassName
+
+The public API intends to follow the `distributing type information specification
+<https://typing.readthedocs.io/en/latest/spec/distributing.html#distributing-type-information>`_
+originally specified in `PEP 484 <https://peps.python.org/pep-0484/>`_.
 
 See documentations of the individual APIs for more details.
 
@@ -68,12 +88,32 @@ See documentations of the individual APIs for more details.
         via the :mod:`robot` root package.
 """
 
-from robot.model import SuiteVisitor
-from robot.parsing import (get_tokens, get_resource_tokens, get_init_tokens,
-                           get_model, get_resource_model, get_init_model,
-                           Token)
-from robot.reporting import ResultWriter
-from robot.result import ExecutionResult, ResultVisitor
-from robot.running import TestSuite, TestSuiteBuilder
+from robot.conf.languages import Language as Language, Languages as Languages
+from robot.model import SuiteVisitor as SuiteVisitor
+from robot.parsing import (
+    get_init_model as get_init_model,
+    get_init_tokens as get_init_tokens,
+    get_model as get_model,
+    get_resource_model as get_resource_model,
+    get_resource_tokens as get_resource_tokens,
+    get_tokens as get_tokens,
+    Token as Token,
+)
+from robot.reporting import ResultWriter as ResultWriter
+from robot.result import (
+    ExecutionResult as ExecutionResult,
+    ResultVisitor as ResultVisitor,
+)
+from robot.running import (
+    TestSuite as TestSuite,
+    TestSuiteBuilder as TestSuiteBuilder,
+    TypeInfo as TypeInfo,
+)
 
-from .exceptions import ContinuableFailure, Failure, FatalError, Error, SkipExecution
+from .exceptions import (
+    ContinuableFailure as ContinuableFailure,
+    Error as Error,
+    Failure as Failure,
+    FatalError as FatalError,
+    SkipExecution as SkipExecution,
+)

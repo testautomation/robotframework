@@ -5,9 +5,9 @@ Variables         variables_to_verify.py
 Should Contain Any
     [Template]    Should Contain Any
     abcdefg    c
-    åäö        x    y    z    ä    b
-    ${LIST}    x    y    z    e    b    c
-    ${DICT}    x    y    z    a    b    c
+    åäö        x    y    z=3    ä    b
+    ${LIST}    x    y    z=3    e    b    c
+    ${DICT}    x    y    z=3    a    b    c
     ${LIST}    41    ${42}    43
 
 Should Contain Any failing
@@ -118,13 +118,37 @@ Should Contain Any and collapse spaces
     ${DICT 5}     e e                    collapse_spaces=TRUE
     ${DICT 5}     e \n \t e              collapse_spaces=TRUE
 
+Should Contain Any with recursive normalization
+    [Template]    Should Contain Any
+    ${{(['a', 'B'], ['c'])}}                  no match    ${{['A', 'b']}}       ignore_case=True
+    ${{([' a ', 'B '], ['c'])}}               no match    ${{['a', ' B']}}      strip_spaces=True
+    ${{[['a${SPACE*7}a', 'B${SPACE*7}']]}}    no match    ${{['a a', 'B ']}}    collapse_spaces=True
+
+Should Contain Any with bytes auto conversion
+    [Documentation]    FAIL Several failures occurred:
+    ...
+    ...    1) ValueError: Argument 'ab\u0666' cannot be converted to bytes: Character '\u0666' cannot be mapped to a byte.
+    ...
+    ...    2) ValueError: Argument '666' (integer) cannot be converted to bytes: 666 is not in range 0-255.
+    ...
+    ...    3) 'this fails' does not contain any of 'no match', '' or ''
+    [Template]    Should Contain Any
+    ${{b'good'}}                 no match    oo
+    ${{b'h\xfcv\xe4'}}           no match    üvä
+    ${{bytes([0, 1, 2])}}        no match    \x00\x01
+    ${{bytes([0, 1, 2])}}        no match    ${1}
+    ${{bytearray([0, 1, 2])}}    no match    ${{[1, 2]}}
+    ${{bytes([0, 1, 2])}}        no match    ab\u0666
+    ${{bytearray([0, 1, 2])}}    no match    ${666}
+    ${{b'this fails'}}           no match    ${0}    ${{[0, 1, 2]}}
+
 Should Contain Any without items fails
-    [Documentation]    FAIL    One or more items required.
+    [Documentation]    FAIL    One or more item required.
     Should Contain Any    foo
 
 Should Contain Any with invalid configuration
-    [Documentation]    FAIL    Unsupported configuration parameters: 'bad parameter' and 'шта'.
-    Should Contain Any    abcdefg    +    \=    msg=Message    bad parameter=True    шта=?
+    [Documentation]    FAIL    Keyword 'BuiltIn.Should Contain Any' got unexpected named arguments 'bad parameter' and 'шта'.
+    Should Contain Any    abcdefg    +    ok=True    msg=Message    bad parameter=True    шта=?
 
 Should Not Contain Any
     [Template]    Should Not Contain Any
@@ -249,10 +273,28 @@ Should Not Contain Any and collapse spaces
     ${LIST 4}    b\n\t     collapse_spaces=Yes
     ${DICT 5}    e\te       collapse_spaces=TRUE
 
+Should Not Contain Any with bytes auto conversion
+    [Documentation]    FAIL Several failures occurred:
+    ...
+    ...    1) ValueError: Argument 'ab\u0666' cannot be converted to bytes: Character '\u0666' cannot be mapped to a byte.
+    ...
+    ...    2) ValueError: Argument '666' (integer) cannot be converted to bytes: 666 is not in range 0-255.
+    ...
+    ...    3) 'this fails' contains one or more of 'no match' or 'fails'
+    [Template]    Should Not Contain Any
+    ${{b'hyva'}}                 no match    ä
+    ${{bytearray(b'hyva')}}      no match    ä
+    ${{bytes([0, 1, 2])}}        no match    \x03
+    ${{bytes([0, 1, 2])}}        no match    ${3}
+    ${{bytearray([0, 1, 2])}}    no match    ${{[1, 2, 3]}}
+    ${{bytes([0, 1, 2])}}        no match    ab\u0666
+    ${{bytearray([0, 1, 2])}}    no match    ${666}
+    ${{b'this fails'}}           no match    fails
+
 Should Not Contain Any without items fails
-    [Documentation]    FAIL    One or more items required.
+    [Documentation]    FAIL    One or more item required.
     Should Not Contain Any    foo
 
 Should Not Contain Any with invalid configuration
-    [Documentation]    FAIL    Unsupported configuration parameter: 'bad parameter'.
-    Should Not Contain Any    abcdefg    +    \=    msg=Message    bad parameter=True
+    [Documentation]    FAIL    Keyword 'BuiltIn.Should Not Contain Any' got unexpected named argument 'bad parameter'.
+    Should Not Contain Any    abcdefg    +    ok=True    msg=Message    bad parameter=True

@@ -51,12 +51,11 @@ Ignore Error When Timeout Occurs In UK
     [Documentation]    FAIL Keyword timeout 100 milliseconds exceeded.
     Run Keyword And Ignore Error    Timeouting UK
 
-Ignore Error When Syntax Error At Parsing Time
-    [Documentation]    FAIL Keyword name cannot be empty.
+Ignore Error Cannot Catch Syntax Errors
+    [Documentation]    FAIL IF must have closing END.
     Run Keyword And Ignore Error    Broken User Keyword
 
-Ignore Error When Syntax Error At Run Time
-    [Documentation]    FAIL Keyword 'BuiltIn.No Operation' expected 0 arguments, got 4.
+Ignore Error Can Catch Non-Syntax Errors
     Run Keyword And Ignore Error    No Operation    wrong    number    of    arguments
 
 Ignore Error When Syntax Error In Setting Variables
@@ -155,11 +154,11 @@ Expect Error When Timeout Occurs In UK
     [Documentation]    FAIL Keyword timeout 100 milliseconds exceeded.
     Run Keyword And Expect Error    *    Timeouting UK
 
-Expect Error When Syntax Error At Parsing Time
-    [Documentation]    FAIL Keyword name cannot be empty.
+Expect Error Cannot Catch Syntax Errors
+    [Documentation]    FAIL IF must have closing END.
     Run Keyword And Expect Error    *    Broken User Keyword
 
-Expect Error When Syntax Error At Run Time
+Expect Error Can Catch Non-Syntax Errors
     Run Keyword And Expect Error
     ...    No keyword with name 'Non existing keyword' found.
     ...    Non existing keyword
@@ -263,7 +262,7 @@ Passing UK
     Log    Hello world
     No Operation
     ${ret} =    Evaluate    1+2
-    [Return]    ${ret}
+    RETURN    ${ret}
 
 Failing Uk
     Passing Uk
@@ -291,7 +290,8 @@ For Loop With Non Existing Variable
     END
 
 Broken User Keyword
-    ${x}
+    IF    True
+        Not executed
 
 Access To Nonexisting Variable
     Log    ${nonexisting}

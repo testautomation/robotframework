@@ -4,7 +4,10 @@ Suite Setup       Run Tests    --loglevel debug    standard_libraries/collection
 Resource          atest_resource.robot
 
 *** Test Cases ***
-Convert To Dictionary
+Convert To Dictionary with mappings
+    Check Test Case    ${TEST NAME}
+
+Convert To Dictionary with list of tuples
     Check Test Case    ${TEST NAME}
 
 Set To Dictionary
@@ -16,13 +19,22 @@ Set To Dictionary With wrong number of arguments
 Set To Dictionary With **kwargs
     Check Test Case    ${TEST NAME}
 
+Set To Dictionary with immutable
+    Check Test Case    ${TEST NAME}
+
 Remove From Dictionary
     ${tc} =    Check Test Case    ${TEST NAME}
-    Check Log Message    ${tc.kws[0].msgs[0]}    Removed item with key 'b' and value '2'.
-    Check Log Message    ${tc.kws[0].msgs[1]}    Key 'x' not found.
-    Check Log Message    ${tc.kws[0].msgs[2]}    Key '2' not found.
+    Check Log Message    ${tc[0, 0]}    Removed item with key 'b' and value '2'.
+    Check Log Message    ${tc[0, 1]}    Key 'x' not found.
+    Check Log Message    ${tc[0, 2]}    Key '2' not found.
+
+Remove From Dictionary with immutable
+    Check Test Case    ${TEST NAME}
 
 Keep In Dictionary
+    Check Test Case    ${TEST NAME}
+
+Keep In Dictionary with immutable
     Check Test Case    ${TEST NAME}
 
 Copy Dictionary
@@ -62,94 +74,7 @@ Get From Dictionary With Invalid Key
     Check Test Case    ${TEST NAME} 1
     Check Test Case    ${TEST NAME} 2
 
-Dictionary Should Contain Key
-    Check Test Case    ${TEST NAME}
-
-Dictionary Should Contain Key With Missing Key
-    Check Test Case    ${TEST NAME} 1
-    Check Test Case    ${TEST NAME} 2
-
-Dictionary Should Contain Item
-    Check Test Case    ${TEST NAME}
-
-Dictionary Should Contain Item With Missing Key
-    Check Test Case    ${TEST NAME}
-
-Dictionary Should Contain Item With Wrong Value
-    Check Test Case    ${TEST NAME}
-
-Dictionary Should Not Contain Key
-    Check Test Case    ${TEST NAME}
-
-Dictionary Should Not Contain Key With Existing Key
-    Check Test Case    ${TEST NAME}
-
-Dictionary Should (Not) Contain Key Does Not Require `has_key`
-    Check Test Case    ${TEST NAME}
-
-Dictionary Should Contain Value
-    Check Test Case    ${TEST NAME}
-    Check Test Case    ${TEST NAME}
-
-Dictionary Should Contain Value With Missing Value
-    Check Test Case    ${TEST NAME} 1
-    Check Test Case    ${TEST NAME} 2
-
-Dictionary Should Not Contain Value
-    Check Test Case    ${TEST NAME}
-
-Dictionary Should Not Contain Value With Existing Value
-    Check Test Case    ${TEST NAME}
-
-Dictionaries Should Be Equal
-    Check Test Case    ${TEST NAME}
-
-Dictionaries Of Different Type Should Be Equal
-    Check Test Case    ${TEST NAME}
-
-Dictionaries Should Equal With First Dictionary Missing Keys
-    Check Test Case    ${TEST NAME}
-
-Dictionaries Should Equal With Second Dictionary Missing Keys
-    Check Test Case    ${TEST NAME}
-
-Dictionaries Should Equal With Both Dictionaries Missing Keys
-    Check Test Case    ${TEST NAME}
-
-Dictionaries Should Be Equal With Different Keys And Own Error Message
-    Check Test Case    ${TEST NAME}
-
-Dictionaries Should Be Equal With Different Keys And Own And Default Error Messages
-    Check Test Case    ${TEST NAME}
-
-Dictionaries Should Be Equal With Different Values
-    Check Test Case    ${TEST NAME}
-
-Dictionaries Should Be Equal With Different Values And Own Error Message
-    Check Test Case    ${TEST NAME}
-
-Dictionaries Should Be Equal With Different Values And Own And Default Error Messages
-    Check Test Case    ${TEST NAME}
-
-Dictionary Should Contain Sub Dictionary
-    Check Test Case    ${TEST NAME}
-
-Dictionary Should Contain Sub Dictionary With Missing Keys
-    Check Test Case    ${TEST NAME}
-
-Dictionary Should Contain Sub Dictionary With Missing Keys And Own Error Message
-    Check Test Case    ${TEST NAME}
-
-Dictionary Should Contain Sub Dictionary With Missing Keys And Own And Default Error Message
-    Check Test Case    ${TEST NAME}
-
-Dictionary Should Contain Sub Dictionary With Different Value
-    Check Test Case    ${TEST NAME}
-
-Dictionary Should Contain Sub Dictionary With Different Value And Own Error Message
-    Check Test Case    ${TEST NAME}
-
-Dictionary Should Contain Sub Dictionary With Different Value And Own And Default Error Message
+Get From Dictionary With Default
     Check Test Case    ${TEST NAME}
 
 Log Dictionary With Different Log Levels
@@ -159,17 +84,18 @@ Log Dictionary With Different Log Levels
     ...    a: 1
     ...    b: 2
     ...    c:
-    Check Log Message    ${tc.kws[0].msgs[0]}    ${expected}    INFO
-    Should Be Empty    ${tc.kws[1].msgs}
-    Check Log Message    ${tc.kws[2].msgs[0]}    ${expected}    WARN
-    Check Log Message    ${tc.kws[3].msgs[0]}    ${expected}    DEBUG
-    Check Log Message    ${tc.kws[4].msgs[0]}    ${expected}    INFO
+    Check Log Message    ${tc[0, 0]}    ${expected}    INFO
+    Should Be Empty      ${tc[1].body}
+    Check Log Message    ${tc[2, 0]}    ${expected}    WARN
+    Check Log Message    ${tc[3, 0]}    ${expected}    DEBUG
+    Check Log Message    ${tc[4, 0]}    ${expected}    INFO
 
 Log Dictionary With Different Dictionaries
     ${tc} =    Check Test Case    ${TEST NAME}
-    Check Log Message    ${tc.kws[0].msgs[0]}    Dictionary is empty.
-    Check Log Message    ${tc.kws[1].msgs[0]}    Dictionary has one item:\na: 1
-    Check Log Message    ${tc.kws[3].msgs[0]}    Dictionary size is 3 and it contains following items:\nTrue: xxx\nfoo: []\n(1, 2, 3): 3.14
+    Check Log Message    ${tc[0, 0]}    Dictionary is empty.
+    Check Log Message    ${tc[1, 0]}    Dictionary has one item:\na: 1
+    Check Log Message    ${tc[3, 0]}    Dictionary size is 3 and it contains following items:\nTrue: xxx\nfoo: []\n(1, 2, 3): 3.14
+    Check Log Message    ${tc[4, 0]}    Dictionary size is 2 and it contains following items:\na: 1\nb: 2
 
 Pop From Dictionary Without Default
     Check Test Case    ${TEST NAME}
@@ -177,5 +103,11 @@ Pop From Dictionary Without Default
 Pop From Dictionary With Default
     Check Test Case    ${TEST NAME}
 
+Pop From Dictionary with immutable
+    Check Test Case    ${TEST NAME}
+
 Check invalid dictionary argument errors
+    Check Test Case    ${TEST NAME}
+
+Bytes normalization
     Check Test Case    ${TEST NAME}

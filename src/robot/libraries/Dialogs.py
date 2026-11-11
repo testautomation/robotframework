@@ -15,100 +15,152 @@
 
 """A library providing dialogs for interacting with users.
 
-``Dialogs`` is Robot Framework's standard library that provides means
+`Dialogs` is Robot Framework's standard library that provides means
 for pausing the test or task execution and getting input from users.
 
 Long lines in the provided messages are wrapped automatically. If you want
-to wrap lines manually, you can add newlines using the ``\\n`` character
+to wrap lines manually, you can add newlines using the `\\n` character
 sequence.
-
-The library has a known limitation that it cannot be used with timeouts.
 """
 
 from robot.version import get_version
-from robot.utils import is_truthy
 
-from .dialogs_py import (InputDialog, MessageDialog, MultipleSelectionDialog,
-                         PassFailDialog, SelectionDialog)
-
+from .dialogs_py import (
+    InputDialog, MessageDialog, MultipleSelectionDialog, PassFailDialog, SelectionDialog
+)
 
 __version__ = get_version()
-__all__ = ['execute_manual_step', 'get_value_from_user',
-           'get_selection_from_user', 'pause_execution', 'get_selections_from_user']
+__all__ = [
+    "execute_manual_step",
+    "get_selection_from_user",
+    "get_selections_from_user",
+    "get_value_from_user",
+    "pause_execution",
+]
+
+ROBOT_LIBRARY_DOC_FORMAT = "Markdown"
 
 
-def pause_execution(message='Execution paused. Press OK to continue.'):
-    """Pauses execution until user clicks ``Ok`` button.
+def pause_execution(message: str = "Execution paused. Press OK to continue."):
+    """Pauses execution until user clicks `Ok` button.
 
-    ``message`` is the message shown in the dialog.
+    Args:
+        message: The message shown in the dialog.
     """
     MessageDialog(message).show()
 
 
-def execute_manual_step(message, default_error=''):
+def execute_manual_step(message: str, default_error: str = ""):
     """Pauses execution until user sets the keyword status.
 
-    User can press either ``PASS`` or ``FAIL`` button. In the latter case execution
+    User can press either `PASS` or `FAIL` button. In the latter case execution
     fails and an additional dialog is opened for defining the error message.
 
-    ``message`` is the instruction shown in the initial dialog and
-    ``default_error`` is the default value shown in the possible error message
-    dialog.
+    Args:
+        message: The instruction shown in the initial dialog.
+        default_error: The default value shown in the possible error message
+            dialog.
     """
     if not _validate_user_input(PassFailDialog(message)):
-        msg = get_value_from_user('Give error message:', default_error)
+        msg = get_value_from_user("Give error message:", default_error)
         raise AssertionError(msg)
 
 
-def get_value_from_user(message, default_value='', hidden=False):
+def get_value_from_user(
+    message: str,
+    default_value: str = "",
+    hidden: bool = False,
+) -> str:
     """Pauses execution and asks user to input a value.
 
     Value typed by the user, or the possible default value, is returned.
-    Returning an empty value is fine, but pressing ``Cancel`` fails the keyword.
+    Returning an empty value is fine, but pressing `Cancel` fails the keyword.
 
-    ``message`` is the instruction shown in the dialog and ``default_value`` is
-    the possible default value shown in the input field.
+    Args:
+        message: The instruction shown in the dialog.
+        default_value: The possible default value shown in the input field.
+        hidden: If given a true value, the value typed by the user is hidden.
 
-    If ``hidden`` is given a true value, the value typed by the user is hidden.
-    ``hidden`` is considered true if it is a non-empty string not equal to
-    ``false``, ``none`` or ``no``, case-insensitively. If it is not a string,
-    its truth value is got directly using same
-    [http://docs.python.org/library/stdtypes.html#truth|rules as in Python].
+    Returns:
+        Value typed by the user, or the default value.
+
+    Raises:
+        RuntimeError: If the user presses `Cancel`.
 
     Example:
-    | ${username} = | Get Value From User | Input user name | default    |
-    | ${password} = | Get Value From User | Input password  | hidden=yes |
+
+    ```robotframework
+    *** Test Cases ***
+    Get Credentials
+        ${username} =    Get Value From User    Input username    default
+        ${password} =    Get Value From User    Input password    hidden=yes
+    ```
     """
-    return _validate_user_input(InputDialog(message, default_value,
-                                            is_truthy(hidden)))
+    return _validate_user_input(InputDialog(message, default_value, hidden))
 
 
-def get_selection_from_user(message, *values):
+def get_selection_from_user(
+    message: str,
+    *values: str,
+    default: "str | int | None" = None,
+) -> str:
     """Pauses execution and asks user to select a value.
 
-    The selected value is returned. Pressing ``Cancel`` fails the keyword.
+    The selected value is returned. Pressing `Cancel` fails the keyword.
 
-    ``message`` is the instruction shown in the dialog and ``values`` are
-    the options given to the user.
+    Args:
+        message: The instruction shown in the dialog.
+        *values: The options given to the user.
+        default: Optional default value. Can either be one of the specified
+            values or the index of the value starting from `1`. For example,
+            `default=user1` and `default=1` in the examples below have the
+            exact same effect.
+
+    Returns:
+        The value selected by the user.
+
+    Raises:
+        RuntimeError: If the user presses `Cancel`.
 
     Example:
-    | ${user} = | Get Selection From User | Select user | user1 | user2 | admin |
+
+    ```robotframework
+    *** Test Cases ***
+    Select User
+        ${user} =    Get Selection From User    Select user    user1    user2    admin
+        ${user} =    Get Selection From User    Select user    user1    user2    admin    default=user1
+        ${user} =    Get Selection From User    Select user    user1    user2    admin    default=1
+    ```
+
+    `default` is new in Robot Framework 7.1.
     """
-    return _validate_user_input(SelectionDialog(message, values))
+    return _validate_user_input(SelectionDialog(message, values, default))
 
 
-def get_selections_from_user(message, *values):
+def get_selections_from_user(message: str, *values: str) -> "list[str]":
     """Pauses execution and asks user to select multiple values.
 
     The selected values are returned as a list. Selecting no values is OK
-    and in that case the returned list is empty. Pressing ``Cancel`` fails
+    and in that case the returned list is empty. Pressing `Cancel` fails
     the keyword.
 
-    ``message`` is the instruction shown in the dialog and ``values`` are
-    the options given to the user.
+    Args:
+        message: The instruction shown in the dialog.
+        *values: The options given to the user.
+
+    Returns:
+        The values selected by the user as a list. Empty if nothing was selected.
+
+    Raises:
+        RuntimeError: If the user presses `Cancel`.
 
     Example:
-    | ${users} = | Get Selections From User | Select users | user1 | user2 | admin |
+
+    ```robotframework
+    *** Test Cases ***
+    Select Users
+        ${users} =    Get Selections From User    Select users    user1    user2    admin
+    ```
     """
     return _validate_user_input(MultipleSelectionDialog(message, values))
 
@@ -116,5 +168,5 @@ def get_selections_from_user(message, *values):
 def _validate_user_input(dialog):
     value = dialog.show()
     if value is None:
-        raise RuntimeError('No value provided by user.')
+        raise RuntimeError("No value provided by user.")
     return value

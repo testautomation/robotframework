@@ -58,6 +58,15 @@ Boolean
 None
     None    ''
 
+Datetime
+    datetime.datetime(2023, 9, 12, 16, 8)    datetime(2023, 9, 12, 16, 8)
+
+Date
+    datetime.date(2023, 9, 12)               datetime(2023, 9, 12)
+
+Timedelta
+    datetime.timedelta(seconds=3.14)         3.14
+
 Custom object
     [Documentation]    Arbitrary objects cannot be transferred over XML-RPC and thus only their string presentation is used
     MyObject()    '<MyObject>'
@@ -105,15 +114,15 @@ Dictionary with non-string keys and values
     {1: 'a', 2: 3, (): (), None: None}    {'1': 'a', '2': 3, '()': [], '': ''}
 
 Dictionary with non-ASCII keys
-    {u'\\xe4': 1}
-    {u'\\u2603': 2}
+    {'\\xe4': 1}
+    {'\\u2603': 2}
 
 Dictionary with non-ASCII values
-    {'1': u'\\xe4'}
-    {'2': u'\\u2603'}
+    {'1': '\\xe4'}
+    {'2': '\\u2603'}
 
 Dictionary with non-ASCII byte keys
-    {b'\\x80': 'xx'}    {'\\\\x80': 'xx'}
+    {b'\\x80': 'xx'}    {'\\x80': 'xx'}
 
 Dictionary with non-ASCII byte values
     {'xx': b'\\xe4'}    binary=yes

@@ -3,7 +3,7 @@ Test Setup      Create Output Directory
 Resource        cli_resource.robot
 
 *** Variables ***
-${TIMESTAMP}   ???????? ??:??:??.???
+${TIMESTAMP}   20??-??-?? ??:??:??.??????
 
 *** Test Cases ***
 Debugfile
@@ -23,8 +23,12 @@ Debugfile
     Debug file should contain    ${content}    + END SUITE: Normal
     Syslog Should Contain  DebugFile: DeBug.TXT
     ${path} =  Set Variable  [:.\\w /\\\\~+-]*DeBug\\.TXT
-    Stdout Should Match Regexp  (?s).*Debug: {3}${path}.*
-    Syslog Should Match Regexp  (?s).*Debug: ${path}.*
+    Stdout Should Match Regexp  .*Debug: {3}${path}.*
+    Syslog Should Match Regexp  .*Debug: ${path}.*
+
+Debug file messages are not delayed when timeouts are active
+    Run Tests    -b debug.txt    cli/runner/debugfile.robot
+    Check Test Case    ${TEST NAME}
 
 Debugfile Log Level Should Always Be Debug
     [Documentation]  --loglevel option should not affect what's written to debugfile
@@ -45,8 +49,8 @@ Debugfile timestamps are accurate
     ${tc} =    Check Test Case    LibraryAddsTimestampAsInteger
     ${content} =     Get file     ${CLI OUTDIR}/debug.txt
     Debug file should contain    ${content}
-    ...    ${tc.kws[0].msgs[0].timestamp} - INFO - Known timestamp
-    ...    ${tc.kws[0].msgs[1].timestamp} - INFO - <b>Current</b>
+    ...    ${tc[0, 0].timestamp} - INFO - Known timestamp
+    ...    ${tc[0, 1].timestamp} - INFO - <b>Current</b>
 
 Writing Non-ASCII To Debugfile
     [Documentation]    Tests also that '.txt' is appended if no extension given
@@ -55,7 +59,7 @@ Writing Non-ASCII To Debugfile
     Stderr Should Be Empty
     ${content} =    Get File    ${CLI OUTDIR}/debug.txt
     Debugfile should contain    ${content}    ${TIMESTAMP} - FAIL - Circle is 360°, Hyvää üötä, উৄ ৰ ৺ ট ৫ ৪ হ
-    Debugfile should contain    ${content}    ${TIMESTAMP} - INFO - +- START TEST: Ñöñ-ÄŚÇÏÏ Tëśt äņd Këywörd Nämës, Спасибо ? ?
+    Debugfile should contain    ${content}    ${TIMESTAMP} - INFO - +- START TEST: Ñöñ-ÄŚÇÏÏ Tëśt äņd Këywörd Nämës, Спасибо
 
 No Debugfile
     Run Tests Without Processing Output  --outputdir ${CLI OUTDIR} --debugfile NoNe -o o.xml  ${TESTFILE}

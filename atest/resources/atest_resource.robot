@@ -41,14 +41,14 @@ Run Tests
     ${result} =    Execute    ${INTERPRETER.runner}   ${options}    ${sources}    ${default options}
     Log Many    RC: ${result.rc}    STDERR:\n${result.stderr}    STDOUT:\n${result.stdout}
     Process Output    ${output}    validate=${validate output}
-    [Return]    ${result}
+    RETURN    ${result}
 
 Run Tests Without Processing Output
     [Arguments]    ${options}=    ${sources}=    ${default options}=${RUNNER DEFAULTS}
     [Documentation]    *OUTDIR:* file://${OUTDIR} (regenerated for every run)
     ${result} =    Execute    ${INTERPRETER.runner}   ${options}    ${sources}    ${default options}
     Log Many    RC: ${result.rc}    STDERR:\n${result.stderr}    STDOUT:\n${result.stdout}
-    [Return]    ${result}
+    RETURN    ${result}
 
 Run Rebot
     [Arguments]    ${options}=    ${sources}=    ${default options}=${COMMON DEFAULTS}    ${output}=${OUTFILE}    ${validate output}=None
@@ -56,37 +56,38 @@ Run Rebot
     ${result} =    Execute    ${INTERPRETER.rebot}   ${options}    ${sources}    ${default options}
     Log Many    RC: ${result.rc}    STDERR:\n${result.stderr}    STDOUT:\n${result.stdout}
     Process Output    ${output}    validate=${validate output}
-    [Return]    ${result}
+    RETURN    ${result}
 
 Run Rebot Without Processing Output
     [Arguments]    ${options}=    ${sources}=    ${default options}=${COMMON DEFAULTS}
     [Documentation]    *OUTDIR:* file://${OUTDIR} (regenerated for every run)
     ${result} =    Execute    ${INTERPRETER.rebot}   ${options}    ${sources}    ${default options}
     Log Many    RC: ${result.rc}    STDERR:\n${result.stderr}    STDOUT:\n${result.stdout}
-    [Return]    ${result}
+    RETURN    ${result}
 
 Execute
     [Arguments]    ${executor}    ${options}    ${sources}    ${default options}=
     Set Execution Environment
     @{arguments} =    Get Execution Arguments    ${options}    ${sources}    ${default options}
     ${result} =    Run Process    @{executor}    @{arguments}
-    ...    stdout=${STDOUTFILE}    stderr=${STDERRFILE}    output_encoding=SYSTEM
+    ...    stdout=${STDOUTFILE}    stderr=${STDERRFILE}    output_encoding=UTF-8
     ...    timeout=5min    on_timeout=terminate
-    [Return]    ${result}
+    RETURN    ${result}
 
 Get Execution Arguments
     [Arguments]    ${options}    ${sources}    ${default options}
     @{options} =    Split command line    --outputdir ${OUTDIR} ${default options} ${options}
     @{sources} =    Split command line    ${sources}
     @{sources} =    Join Paths    ${DATADIR}    @{sources}
-    [Return]    @{options}    @{sources}
+    RETURN    @{options}    @{sources}
 
 Set Execution Environment
     Remove Directory    ${OUTDIR}    recursive
     Create Directory    ${OUTDIR}
-    Return From Keyword If    not ${SET SYSLOG}
-    Set Environment Variable    ROBOT_SYSLOG_FILE    ${SYSLOG FILE}
-    Set Environment Variable    ROBOT_SYSLOG_LEVEL    ${SYSLOG LEVEL}
+    IF    ${SET SYSLOG}
+        Set Environment Variable    ROBOT_SYSLOG_FILE    ${SYSLOG FILE}
+        Set Environment Variable    ROBOT_SYSLOG_LEVEL    ${SYSLOG LEVEL}
+    END
 
 Copy Previous Outfile
     Copy File    ${OUTFILE}    ${OUTFILE COPY}
@@ -94,57 +95,88 @@ Copy Previous Outfile
 Check Test Suite
     [Arguments]    ${name}    ${message}    ${status}=${None}
     ${suite} =    Get Test Suite    ${name}
-    Run Keyword If    $status is not None    Should Be Equal    ${suite.status}    ${status}
+    IF    $status is not None
+    ...    Should Be Equal    ${suite.status}    ${status}
     Should Be Equal    ${suite.full_message}    ${message}
-    [Return]    ${suite}
+    RETURN    ${suite}
 
 Check Test Doc
     [Arguments]    ${name}    @{expected}
     ${tc} =    Check Test Case    ${name}
     ${expected} =    Catenate    @{expected}
     Should Be Equal    ${tc.doc}    ${expected}
-    [Return]    ${tc}
+    RETURN    ${tc}
 
 Check Test Tags
     [Arguments]    ${name}    @{expected}
     ${tc} =    Check Test Case    ${name}
-    Should Contain Tags    ${tc}    @{expected}
-    [Return]    ${tc}
+    Should Have Tags    ${tc}    @{expected}
+    RETURN    ${tc}
+
+Check Body Item Data
+    [Arguments]    ${item}    ${type}=KEYWORD    ${status}=PASS    ${message}=    ${children}=-1    &{others}
+    FOR    ${key}    ${expected}    IN    type=${type}    status=${status}    type=${type}    message=${message}    &{others}
+        IF    $key == 'status' and $type == 'MESSAGE'    CONTINUE
+        VAR    ${actual}    ${item.${key}}
+        IF    isinstance($actual, collections.abc.Iterable) and not isinstance($actual, str)
+            Should Be Equal    ${{', '.join($actual)}}     ${expected}
+        ELSE
+            Should Be Equal    ${actual}    ${expected}
+        END
+    END
+    IF    ${children} >= 0
+    ...    Length Should Be    ${item.body}    ${children}
 
 Check Keyword Data
-    [Arguments]    ${kw}    ${name}    ${assign}=    ${args}=    ${status}=PASS    ${tags}=    ${type}=KEYWORD
-    Should Be Equal    ${kw.name}                    ${name}
+    [Arguments]    ${kw}    ${name}    ${assign}=    ${args}=    ${status}=PASS    ${tags}=    ${doc}=*    ${message}=*    ${type}=KEYWORD    ${children}=-1
+    Should Be Equal    ${kw.full_name}               ${name}
     Should Be Equal    ${{', '.join($kw.assign)}}    ${assign}
     Should Be Equal    ${{', '.join($kw.args)}}      ${args}
     Should Be Equal    ${kw.status}                  ${status}
     Should Be Equal    ${{', '.join($kw.tags)}}      ${tags}
+    Should Match       ${kw.doc}                     ${doc}
+    Should Match       ${kw.message}                 ${message}
     Should Be Equal    ${kw.type}                    ${type}
+    IF    ${children} >= 0
+    ...    Length Should Be    ${kw.body}            ${children}
+
+Check TRY Data
+    [Arguments]    ${try}    ${patterns}=    ${pattern_type}=${None}    ${assign}=${None}    ${status}=PASS
+    Should Be Equal    ${try.type}                      TRY
+    Should Be Equal    ${{', '.join($try.patterns)}}    ${patterns}
+    Should Be Equal    ${try.pattern_type}              ${pattern_type}
+    Should Be Equal    ${try.assign}                    ${assign}
+    Should Be Equal    ${try.status}                    ${status}
 
 Test And All Keywords Should Have Passed
-    [Arguments]    ${name}=${TESTNAME}    ${allow not run}=False
+    [Arguments]    ${name}=${TESTNAME}    ${allow not run}=False    ${allowed failure}=
     ${tc} =    Check Test Case    ${name}
-    All Keywords Should Have Passed    ${tc}    ${allow not run}
+    All Keywords Should Have Passed    ${tc}    ${allow not run}    ${allowed failure}
 
 All Keywords Should Have Passed
-    [Arguments]    ${tc_or_kw}    ${allow not run}=False
-    IF    hasattr($tc_or_kw, 'kws')
-        FOR    ${index}    ${kw}    IN ENUMERATE    @{tc_or_kw.kws}
-            IF    ${allow not run} and (${index} > 0 or $kw.type in ['IF', 'ELSE', 'EXCEPT', 'BREAK'])
-                Should Be True    $kw.status in ['PASS', 'NOT RUN']
-            ELSE
-                Log    ${kw.type}
-                Should Be Equal    ${kw.status}    PASS
-            END
-            All Keywords Should Have Passed    ${kw}    ${allow not run}
+    [Arguments]    ${tc_or_kw}    ${allow not run}=False    ${allowed failure}=
+    FOR    ${index}    ${item}    IN ENUMERATE    @{tc_or_kw.body.filter(messages=False)}
+        IF    $item.failed and not ($item.message == $allowed_failure)
+            Fail    ${item.type} failed: ${item.message}
+        ELSE IF    $item.not_run and not $allow_not_run
+            Fail    ${item.type} was not run.
+        ELSE IF    $item.skipped
+            Fail    ${item.type} was skipped.
+        ELSE IF    $item.passed and $item.message
+            Fail    ${item.type} has unexpected message: ${item.message}
         END
+        All Keywords Should Have Passed    ${item}    ${allow not run}    ${allowed failure}
     END
 
 Get Output File
     [Arguments]    ${path}
-    [Documentation]    Output encoding avare helper
-    ${encoding} =    Set Variable If    r'${path}' in [r'${STDERR FILE}',r'${STDOUT FILE}']    SYSTEM    UTF-8
+    IF    $path in ($STDERR_FILE, $STDOUT_FILE) and $INTERPRETER.version_info < (3, 15)
+        VAR    ${encoding}    SYSTEM
+    ELSE
+        VAR    ${encoding}    UTF-8
+    END
     ${file} =    Get File    ${path}    ${encoding}
-    [Return]    ${file}
+    RETURN    ${file}
 
 File Should Contain
     [Arguments]    ${path}    @{expected}    ${count}=None
@@ -236,9 +268,17 @@ Stderr Should Contain Regexp
     [Arguments]    @{expected}
     File Should Contain Regexp    ${STDERR_FILE}    @{expected}
 
+Stdout Should Be Equal To
+    [Arguments]    @{expected}
+    File Should Be Equal To    ${STDOUT_FILE}    @{expected}
+
 Stdout Should Contain
     [Arguments]    @{expected}    ${count}=None
     File Should Contain    ${STDOUT_FILE}    @{expected}    count=${count}
+
+Stdout Should Be Empty
+    ${stdout} =    Get Stdout
+    Should Be Empty    ${stdout}    Unexpected console output:\n${stdout}
 
 Stdout Should Not Contain
     [Arguments]    @{expected}
@@ -254,15 +294,15 @@ Stdout Should Contain Regexp
 
 Get Syslog
     ${file} =    Get Output File    ${SYSLOG_FILE}
-    [Return]    ${file}
+    RETURN    ${file}
 
 Get Stderr
     ${file} =    Get Output File    ${STDERR_FILE}
-    [Return]    ${file}
+    RETURN    ${file}
 
 Get Stdout
     ${file} =    Get Output File    ${STDOUT_FILE}
-    [Return]    ${file}
+    RETURN    ${file}
 
 Syslog Should Contain Match
     [Arguments]    @{expected}
@@ -294,19 +334,34 @@ Check Names
     Should Be Equal    ${item.longname}    ${longprefix}${name}
 
 Timestamp Should Be Valid
-    [Arguments]    ${time}
-    Log    ${time}
-    Should Not Be Equal    ${time}    ${None}
-    Should Match Regexp    ${time}    ^20\\d{6} \\d{2}:\\d{2}:\\d{2}\\.\\d{3}$    Not valid timestamp
+    [Arguments]    ${timestamp}
+    Should Be True    isinstance($timestamp, datetime.datetime) and $timestamp.year > 2000
+
+Timestamp Should Be
+    [Arguments]    ${timestamp}    ${expected}
+    IF    $expected is not None
+        ${expected} =    Evaluate    datetime.datetime.fromisoformat('${expected}')
+    END
+    Should Be Equal    ${timestamp}    ${expected}
 
 Elapsed Time Should Be Valid
-    [Arguments]    ${time}
-    Log    ${time}
-    Should Be True    isinstance($time, int)    Not valid elapsed time: ${time}
-    # On CI elapsed time has sometimes been negative. We cannot control system time there,
-    # so better to log a warning than fail the test in that case.
-    Run Keyword If    $time < 0
-    ...    Log    Negative elapsed time '${time}'. Someone messing with system time?    WARN
+    [Arguments]    ${elapsed}    ${minimum}=0    ${maximum}=${{sys.maxsize}}
+    Should Be True    isinstance($elapsed, datetime.timedelta)
+    Should Be True    $elapsed.total_seconds() >= ${minimum}
+    Should Be True    $elapsed.total_seconds() <= ${maximum}
+
+Elapsed Time Should Be
+    [Arguments]    ${elapsed}    ${expected}
+    IF    isinstance($expected, str)
+        ${expected} =    Evaluate    ${expected}
+    END
+    Should Be Equal As Numbers    ${elapsed.total_seconds()}    ${expected}
+
+Times Should Be
+    [Arguments]    ${item}    ${start}    ${end}    ${elapsed}
+    Timestamp Should Be       ${item.start_time}      ${start}
+    Timestamp Should Be       ${item.end_time}        ${end}
+    Elapsed Time Should Be    ${item.elapsed_time}    ${elapsed}
 
 Previous test should have passed
     [Arguments]    ${name}
@@ -316,22 +371,22 @@ Previous test should have passed
 Get Stat Nodes
     [Arguments]    ${type}    ${output}=${OUTFILE}
     ${nodes} =    Get Elements    ${output}    statistics/${type}/stat
-    [Return]    ${nodes}
+    RETURN    ${nodes}
 
 Get Tag Stat Nodes
     [Arguments]    ${output}=${OUTFILE}
     ${nodes} =    Get Stat Nodes    tag    ${output}
-    [Return]    ${nodes}
+    RETURN    ${nodes}
 
 Get Total Stat Nodes
     [Arguments]    ${output}=${OUTFILE}
     ${nodes} =    Get Stat Nodes    total    ${output}
-    [Return]    ${nodes}
+    RETURN    ${nodes}
 
 Get Suite Stat Nodes
     [Arguments]    ${output}=${OUTFILE}
     ${nodes} =    Get Stat Nodes    suite    ${output}
-    [Return]    ${nodes}
+    RETURN    ${nodes}
 
 Tag Statistics Should Be
     [Arguments]    ${tag}    ${pass}    ${fail}
@@ -349,7 +404,7 @@ Reset PYTHONPATH
 
 Error in file
     [Arguments]    ${index}    ${path}    ${lineno}    @{message}    ${traceback}=
-    ...    ${stacktrace}=    ${pattern}=True
+    ...    ${stacktrace}=    ${pattern}=True    ${level}=ERROR
     ${path} =    Join Path    ${DATADIR}    ${path}
     ${message} =    Catenate    @{message}
     ${error} =    Set Variable    Error in file '${path}' on line ${lineno}: ${message}
@@ -359,7 +414,7 @@ Error in file
     ${error} =    Set Variable If    $stacktrace
     ...    ${error}\n*${stacktrace}*
     ...    ${error}
-    Check Log Message    ${ERRORS}[${index}]    ${error}    level=ERROR    pattern=${pattern}
+    Check Log Message    ${ERRORS}[${index}]    ${error}    level=${level}    pattern=${pattern}
 
 Error in library
     [Arguments]    ${name}    @{message}    ${pattern}=False    ${index}=0
@@ -375,3 +430,14 @@ Setup Should Not Be Defined
 Teardown Should Not Be Defined
     [Arguments]    ${model_object}
     Should Not Be True     ${model_object.teardown}
+
+Traceback Should Be
+    [Arguments]    ${msg}    @{entries}    ${error}
+    ${exp} =    Set Variable    Traceback (most recent call last):
+    FOR    ${path}    ${func}    ${text}    IN    @{entries}
+        ${path} =    Normalize Path    ${DATADIR}/${path}
+        ${exp} =    Set Variable    ${exp}\n${SPACE*2}File "${path}", line *, in ${func}\n${SPACE*4}${text}
+    END
+    # Remove '~~~^^^' lines.
+    ${msg.message} =    Evaluate    '\\n'.join(line for line in $msg.message.splitlines() if line.strip('~^ ') or not line)
+    Check Log Message    ${msg}    ${exp}\n${error}    DEBUG    pattern=True    traceback=True

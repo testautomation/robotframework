@@ -1,5 +1,7 @@
 *** Settings ***
 Library           CustomConverters.py
+Library           CustomConverters.StatefulLibrary
+Library           CustomConverters.StatefulGlobalLibrary
 Library           CustomConvertersWithLibraryDecorator.py
 Library           CustomConvertersWithDynamicLibrary.py
 Library           InvalidCustomConverters.py
@@ -42,6 +44,21 @@ Custom in Union
 Accept subscripted generics
     Accept subscripted generics    ${{[1, 2, 3]}}    ${6}
 
+With generics
+    With generics
+    ...    ['one', 'two', 'three']
+    ...    ('28.9.2022', '9/28/2022')
+    ...    {'one': '28.9.2022'}
+    ...    {'one', 'two', 'three'}
+    With generics
+    ...    ${{['one', 'two', 'three']}}
+    ...    ${{('28.9.2022', '9/28/2022')}}
+    ...    ${{{'one': '28.9.2022'}}}
+    ...    ${{{'one', 'two', 'three'}}}
+
+With TypedDict
+    TypedDict    {'fi': '29.9.2022', 'us': '9/29/2022'}
+
 Failing conversion
     [Template]    Conversion should fail
     Number     wrong         type=Number     error=Don't know number 'wrong'.
@@ -51,6 +68,33 @@ Failing conversion
     True       ${1.0}        type=boolean    arg_type=float
     Class with hints as converter
     ...        ${1.2}        type=ClassWithHintsAsConverter    arg_type=float
+
+`None` as strict converter
+    Strict    ${{CustomConverters.Strict()}}
+    Conversion should fail    Strict    wrong type
+    ...    type=Strict    error=TypeError: Only Strict instances are accepted, got string.
+
+Only vararg
+    Only var arg    10    10
+
+With library as argument to converter
+    String    ${123}
+
+Test scope library instance is reset between test 1
+    Multiply    2    ${2}
+    Multiply    2    ${4}
+    Multiply    4    ${12}
+
+Test scope library instance is reset between test 2
+    Multiply    2    ${2}
+
+Global scope library instance is not reset between test 1
+    Global Multiply    2    ${2}
+    Global Multiply    2    ${4}
+
+Global scope library instance is not reset between test 2
+    Global Multiply    4    ${12}
+
 
 Invalid converters
     Invalid    a    b    c    d

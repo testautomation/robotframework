@@ -19,56 +19,56 @@ This is exposed via :py:mod:`robot.api.logger`. Implementation must reside
 here to avoid cyclic imports.
 """
 
-import sys
-import threading
+from threading import current_thread
+from typing import Literal
 
-from robot.utils import console_encode
+from robot.utils import safe_str
 
 from .logger import LOGGER
-from .loggerhelper import Message
+from .loggerhelper import Message, MessageLevel, PseudoLevel, write_to_console
+
+# This constant is used by BackgroundLogger.
+# https://github.com/robotframework/robotbackgroundlogger
+LOGGING_THREADS = ["MainThread", "RobotFrameworkTimeoutThread"]
 
 
-LOGGING_THREADS = ('MainThread', 'RobotFrameworkTimeoutThread')
-
-
-def write(msg, level, html=False):
-    # Callable messages allow lazy logging internally, but we don't want to
-    # expose this functionality publicly. See the following issue for details:
-    # https://github.com/robotframework/robotframework/issues/1505
-    if callable(msg):
-        msg = str(msg)
-    if level.upper() not in ('TRACE', 'DEBUG', 'INFO', 'HTML', 'WARN', 'ERROR'):
-        raise RuntimeError("Invalid log level '%s'." % level)
-    if threading.current_thread().name in LOGGING_THREADS:
-        LOGGER.log_message(Message(msg, level, html))
+def write(
+    msg: object,
+    level: "MessageLevel | PseudoLevel" = "INFO",
+    html: bool = False,
+    console: "bool | None" = None,
+):
+    if not isinstance(msg, str):
+        msg = safe_str(msg)
+    if level == "FAIL":
+        raise ValueError(f"Invalid log level '{level}'.")
+    if current_thread().name in LOGGING_THREADS:
+        LOGGER.log_message(Message(msg, level, html=html, console=console))
 
 
 def trace(msg, html=False):
-    write(msg, 'TRACE', html)
+    write(msg, "TRACE", html)
 
 
 def debug(msg, html=False):
-    write(msg, 'DEBUG', html)
+    write(msg, "DEBUG", html)
 
 
-def info(msg, html=False, also_console=False):
-    write(msg, 'INFO', html)
-    if also_console:
-        console(msg)
+def info(msg, html=False, console=False):
+    write(msg, "INFO", html, console)
 
 
 def warn(msg, html=False):
-    write(msg, 'WARN', html)
+    write(msg, "WARN", html)
 
 
 def error(msg, html=False):
-    write(msg, 'ERROR', html)
+    write(msg, "ERROR", html)
 
 
-def console(msg, newline=True, stream='stdout'):
-    msg = str(msg)
-    if newline:
-        msg += '\n'
-    stream = sys.__stdout__ if stream.lower() != 'stderr' else sys.__stderr__
-    stream.write(console_encode(msg, stream=stream))
-    stream.flush()
+def console(
+    msg: object,
+    newline: bool = True,
+    stream: Literal["stdout", "stderr"] = "stdout",
+):
+    write_to_console(msg, newline, stream)

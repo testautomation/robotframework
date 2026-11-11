@@ -1,216 +1,224 @@
 *** Settings ***
-Test Setup        Create Lists for the Tests
-Resource          collections_resources.robot
+Test Setup         Create Lists for the Tests
+Library            Collections
 
 *** Variables ***
-${INDEX ERROR}          ValueError: Cannot convert index 'index' to an integer.
-${LIST OUT OF RANGE}    IndexError: Given index 10 is out of the range 0-2.
+${INDEX ERROR}     ValueError: Argument 'index' got value 'invalid' that cannot be converted to integer.
+${START ERROR}     ValueError: Argument 'start' got value 'invalid' that cannot be converted to integer.
+${START ERROR2}    ValueError: Argument 'start' got value 'invalid' that cannot be converted to integer or ''.
+${END ERROR}       ValueError: Argument 'end' got value 'invalid' that cannot be converted to integer or None.
+${OUT OF RANGE}    IndexError: Given index 10 is out of the range 0-2.
+${TUPLE: tuple}    ('1', 2)
+${DICT: dict}      {'a': 1, 2: 'b'}
+${SET: set}        {'x'}
 
 *** Test Cases ***
 Convert To List
-    ${string list} =    Convert To List    hello
-    Compare To Expected String    ${string list}    ['h', 'e', 'l', 'l', 'o']
-    ${tuple} =    Evaluate    (1, 2, 3)
-    ${tuple list} =    Convert To List    ${tuple}
-    Compare To Expected String    ${tuple list}    [1, 2, 3]
+    [Template]    Verify Result
+    Convert To List    hello      expected=['h', 'e', 'l', 'l', 'o']
+    Convert To List   ${TUPLE}    expected=['1', 2]
+    Convert To List   ${DICT}     expected=['a', 2]
+    Convert To List   ${SET}      expected=['x']
 
 Convert To List With Invalid Type
-    [Documentation]    FAIL STARTS: TypeError:
-    Convert To List    ${1}
+    [Template]    Verify Error
+    Convert To List    ${1}       expected=STARTS: TypeError:
+    Convert To List    ${None}    expected=STARTS: TypeError:
 
 Append To List
-    Append To List    ${L0}    1
-    Compare To Expected String    ${L0}    ['1']
-    Append To List    ${L0}    2    3    4
-    Compare To Expected String    ${L0}    ['1', '2', '3', '4']
+    [Template]    Verify Modification
+    Append To List    ${L0}    1              expected=['1']
+    Append To List    ${L0}    2    3    4    expected=['1', '2', '3', '4']
 
-Insert Into List With String Index
-    Insert Into List And Compare    ${L2}    1    value    ['1', 'value', 2]
+Append To List with immutable
+    [Template]    Verify Result
+    Append To List    ('a', 'b')    c              expected=['a', 'b', 'c']
+    Append To List    ('a', 'b')    c    d    e    expected=['a', 'b', 'c', 'd', 'e']
 
-Insert Into List With Int Index
-    Insert Into List And Compare    ${L2}    ${1}    value    ['1', 'value', 2]
+Insert Into List
+    [Template]    Verify Modification
+    Insert Into List    ${L2}    1       v1    expected=['1', 'v1', 2]
+    Insert Into List    ${L2}    ${1}    v2    expected=['1', 'v2', 'v1', 2]
+    Insert Into List    ${L2}    1000    v3    expected=['1', 'v2', 'v1', 2, 'v3']
+    Insert Into List    ${L2}    -2      v4    expected=['1', 'v2', 'v1', 'v4', 2, 'v3']
 
-Insert Into List With Index Over Lists Size
-    Insert Into List And Compare    ${L2}    1000    value    ['1', 2, 'value']
+Insert Into List with immutable
+    [Template]    Verify Result
+    Insert Into List    ('a', 'c')    1    b    expected=['a', 'b', 'c']
 
-Insert Into List With Index Negative Index
-    Insert Into List And Compare    ${L4}    -2    value    ['41', 42, 'value', '43' ,'44']
-
-Insert Into List With Index Under Lists Size
-    Insert Into List And Compare    ${L2}    -1000    value    ['value' , '1', 2]
-
-Insert Into List With Invalid Index
-    [Documentation]    FAIL ${INDEX ERROR}
-    Insert Into List    ${L3}    index    value
+Insert Into List with invalid index
+    [Template]    Verify Error
+    Insert Into List    ${L3}    invalid    value    expected=${INDEX ERROR}
 
 Combine Lists
-    ${combined list} =    Combine Lists    ${L1}    ${L2}
-    Compare To Expected String    ${combined list}    ['1', '1', 2]
-    ${combined list} =    Combine Lists    ${L1}    ${L2}    ${L3}    ${L0}
-    Compare To Expected String    ${combined list}    ['1', '1', 2, '11', 12, '13']
+    [Template]    Verify Result
+    Combine Lists    ${L1}    ${L2}                      expected=['1', '1', 2]
+    Combine Lists    ${L1}    ${L2}    ${L3}    ${L0}    expected=['1', '1', 2, '11', 12, '13']
+    Combine Lists    ${TUPLE}    ${DICT}    ${SET}       expected=['1', 2, 'a', 2, 'x']
 
 Set List Value
-    Set List Value    ${L3}    1    value
-    Compare To Expected String    ${L3}    ['11', 'value', '13']
+    [Template]    Verify Modification
+    Set List Value    ${L3}    1       v1    expected=['11', 'v1', '13']
+    Set List Value    ${L3}    ${1}    v2    expected=['11', 'v2', '13']
+    Set List Value    ${L3}    -1      v3    expected=['11', 'v2', 'v3']
 
-Set List Value Index Out Of List
-    [Documentation]    FAIL ${LIST OUT OF RANGE}
-    Set List Value    ${L3}    10    value
+Set List Value with immutable
+    [Template]    Verify Result
+    Set List Value    ('a', 'b', 'c')    1    B    expected=['a', 'B', 'c']
 
-Set List Value With Invalid Index
-    [Documentation]    FAIL ${INDEX ERROR}
-    Set List Value    ${L3}    index    value
+Set List Value with invalid index
+    [Template]    Verify Error
+    Set List Value    ${L3}    10         whatever     expected=${OUT OF RANGE}
+    Set List Value    ${L3}    invalid    whatever     expected=${INDEX ERROR}
 
 Remove Values From List
-    Remove Values From List    ${LONG}    ${42}
-    Compare To Expected String    ${LONG}    ['1', '1', 2, '41', '43', '44', '1', 2]
-    Remove Values From List    ${LONG}    ${2}    ${42}    1
-    Compare To Expected String    ${LONG}    ['41', '43', '44']
+    [Template]    Verify Modification
+    Remove Values From List    ${LONG}    ${42}        expected=['1', '1', 2, '41', '43', '44', '1', 2]
+    Remove Values From List    ${LONG}    1    ${2}    expected=['41', '43', '44']
+    Remove Values From List    ${LONG}    nonex        expected=['41', '43', '44']
 
-Remove Non Existing Values From List
-    Remove Values From List    ${L3}    1234
-    Compare To Expected String    ${L3}    ['11', 12, '13']
+Remove Values From List with immutable
+    [Template]    Verify Result
+    Remove Values From List    (1, 2, 2, 3, 2, 4)    ${2}    expected=[1, 3, 4]
 
 Remove From List
-    ${removed value} =    Remove From List    ${L3}    1
-    Should Be Equal    ${removed value}    ${12}
-    Compare To Expected String    ${L3}    ['11', '13']
-    ${removed value} =    Remove From List    ${L3}    -2
-    Should Be Equal    ${removed value}    11
-    Compare To Expected String    ${L3}    ['13']
+    [Template]    Verify Modification
+    Remove From List    ${L3}    ${1}    expected=['11', '13']    result=${12}
+    Remove From List    ${L3}    -2      expected=['13']          result=11
 
-Remove From List Index Out Of List
-    [Documentation]    FAIL ${LIST OUT OF RANGE}
-    Remove From List    ${L3}    10
+Remove From List with immutable
+    [Template]    Verify Result
+    Remove From List    ('a', 'b', 'c')    ${1}    expected=b     type=str
+    Remove From List    (-1, -2, -3)       1       expected=-2    type=int
 
-Remove From List With Invalid Index
-    [Documentation]    FAIL ${INDEX ERROR}
-    Remove From List    ${L3}    index
+Remove From List with invalid index
+    [Template]    Verify Error
+    Remove From List    ${L3}    10         expected=${OUT OF RANGE}
+    Remove From List    ${L3}    invalid    expected=${INDEX ERROR}
 
 Remove Duplicates
-    ${result} =    Remove Duplicates    ${L3}
-    Should Be Equal    ${result}    ${L3}
-    ${result} =    Remove Duplicates    ${LONG}
-    Compare To Expected String    ${result}    ['1', 2, '41', 42, '43', '44']
+    [Template]    Verify Result
+    Remove Duplicates    ${L3}      expected=${L3}
+    Remove Duplicates    ${LONG}    expected=['1', 2, '41', 42, '43', '44']
 
 Count Values In List
-    ${count} =    Count Values In List    ${LONG}    1
-    Should Be Equal As Integers    ${count}    3
-    ${count} =    Count Values In List    ${LONG}    ${2}
-    Should Be Equal As Integers    ${count}    2
-    ${count} =    Count Values In List    ${LONG}    1    3
-    Should Be Equal As Integers    ${count}    1
-    ${count} =    Count Values In List    ${LONG}    1    0    4
-    Should Be Equal As Integers    ${count}    2
+    [Template]    Verify Result
+    Count Values In List    ${LONG}    1              expected=3    type=int
+    Count Values In List    ${LONG}    ${2}           expected=2    type=int
+    Count Values In List    ${LONG}    1    3         expected=1    type=int
+    Count Values In List    ${LONG}    1    0    4    expected=2    type=int
 
-Count Values In List With Invalid Start Index
-    [Documentation]    FAIL ${INDEX ERROR}
-    Count Values In List    ${LONG}    2    index    1
-
-Count Values In List With Invalid Stop Index
-    [Documentation]    FAIL ${INDEX ERROR}
-    Count Values In List    ${LONG}    2    1    index
+Count Values In List with invalid index
+    [Template]    Verify Error
+    Count Values In List    ${LONG}    2    invalid    1    expected=${START ERROR}
+    Count Values In List    ${LONG}    2    1    invalid    expected=${END ERROR}
 
 Get Index From List
-    ${position} =    Get Index From List    ${LONG}    ${2}
-    Should Be Equal As Integers    ${position}    2
-    ${position} =    Get Index From List    ${LONG}    ${2}    3
-    Should Be Equal As Integers    ${position}    8
-    ${position} =    Get Index From List    ${LONG}    43    4    7
-    Should Be Equal As Integers    ${position}    5
-    ${position} =    Get Index From List    ${LONG}    43    ${EMPTY}    8
-    Should Be Equal As Integers    ${position}    5
+    [Template]    Verify Result
+    Get Index From List    ${LONG}    ${2}              expected=2     type=int
+    Get Index From List    ${LONG}    ${2}    3         expected=8     type=int
+    Get Index From List    ${LONG}    43      4    7    expected=5     type=int
+    Get Index From List    ${LONG}    43      end=8     expected=5     type=int
+    Get Index From List    ${LONG}    nonex             expected=-1    type=int
 
-Get Index From List With Non Existing Value
-    ${position} =    Get Index From List    ${LONG}    1234
-    Should Be Equal As Integers    ${position}    -1
+Get Index From List with empty string as start index is deprecated
+    [Template]    Verify Result
+    Get Index From List    ${LONG}    43    ${EMPTY}    8    expected=5     type=int
 
-Get Index From List With Invalid Start Index
-    [Documentation]    FAIL ${INDEX ERROR}
-    Get Index From List    ${LONG}    2    index    1
+Get Index From List with negative indices
+    [Template]    Verify Result
+    Get Index From List    ${LONG}    ${2}     -1          expected=8     type=int
+    Get Index From List    ${LONG}    43       -4    -2    expected=5     type=int
+    Get Index From List    ${LONG}    nonex    -3          expected=-1    type=int
+    Get Index From List    ${LONG}    43       -2          expected=-1    type=int
 
-Get Index From List With Invalid Stop Index
-    [Documentation]    FAIL ${INDEX ERROR}
-    Get Index From List    ${LONG}    2    1    index
+Get Index From List with indices out-of-bounds
+    [Template]    Verify Result
+    Get Index From List    ${LONG}    43    100         expected=-1    type=int
+    Get Index From List    ${LONG}    43    end=100     expected=5     type=int
+    Get Index From List    ${LONG}    43    -100        expected=5     type=int
+    Get Index From List    ${LONG}    43    end=-100    expected=-1    type=int
+
+Get Index From List with invalid index
+    [Template]    Verify Error
+    Get Index From List    ${LONG}    2    invalid    1     expected=${START ERROR2}
+    Get Index From List    ${LONG}    2    1    invalid     expected=${END ERROR}
 
 Copy List
     ${copy} =    Copy List    ${L2}
-    Append To List    ${L2}    1    2    3
-    Compare To Expected String    ${copy}    ['1', 2]
+    Append To List    ${L2}      add to original
+    Append To List    ${copy}    add to copy
+    Should Be Equal    ${copy}    ['1', 2, 'add to copy']    type=list
 
 Shallow Copy List
-    ${dict} =    Create Dictionary    a    1
-    ${a} =    Create List    ${dict}
-    ${b} =    Copy List    ${a}
-    Set To Dictionary    ${a}[0]    a    2
-    Should Be Equal    ${a}[0][a]    2
-    Should Be Equal    ${b}[0][a]    2
+    VAR    &{dict}    a=1
+    VAR    @{list}    ${dict}
+    ${copy} =    Copy List    ${list}
+    Set To Dictionary    ${dict}    a    2
+    Should Be Equal    ${list}[0][a]    2
+    Should Be Equal    ${copy}[0][a]    2
 
 Deep Copy List
-    ${dict} =    Create Dictionary    a    1
-    ${a} =    Create List    ${dict}
-    ${b} =    Copy List    ${a}   deepcopy=True
-    Set To Dictionary    ${a}[0]    a    2
-    Set To Dictionary    ${b}[0]    a    3
-    Should Be Equal    ${a}[0][a]    2
-    Should Be Equal    ${b}[0][a]    3
+    VAR    &{dict}    a=1
+    VAR    @{list}    ${dict}
+    ${copy} =    Copy List    ${list}    deepcopy=True
+    Set To Dictionary    ${dict}    a    2
+    Should Be Equal    ${list}[0][a]    2
+    Should Be Equal    ${copy}[0][a]    1
 
-Reserve List
-    Reverse List    ${LONG}
-    Compare To Expected String    ${LONG}    [2, '1', '44', '43', 42, '41', 2, '1', '1']
+Reverse List
+    [Template]    Verify Modification
+    Reverse List    ${LONG}    expected=[2, '1', '44', '43', 42, '41', 2, '1', '1']
+
+Reverse List with immutable
+    [Template]    Verify Result
+    Reverse List    (1, 'a', None)    expected=[None, 'a', 1]
 
 Sort List
-    ${empty}    ${ints}    ${chars} =    Evaluate    [], [3, -1, 0.1, 0, 42], list('Hello World!')
-    Sort List    ${empty}
-    Compare To Expected String    ${empty}    []
-    Sort List    ${ints}
-    Compare To Expected String    ${ints}    [-1, 0, 0.1, 3, 42]
-    Sort List    ${chars}
-    Compare To Expected String    ${chars}    sorted('Hello World!')
+    [Template]    Verify Modification
+    Sort List    ${{[]}}                     expected=[]
+    Sort List    ${{[3, -1, 0.1, 0, 42]}}    expected=[-1, 0, 0.1, 3, 42]
 
-Sorting Unsortable List Fails
-    [Documentation]    FAIL STARTS: TypeError:
-    ${unsortable} =    Evaluate    [complex(1), complex(2)]
-    Sort List    ${unsortable}
+Sort List with immutable
+    [Template]    Verify Result
+    Sort List    ()                     expected=[]
+    Sort List    (3, -1, 0.1, 0, 42)    expected=[-1, 0, 0.1, 3, 42]
+
+Sorting unsortable list fails
+    [Template]    Verify Error
+    Sort List    ${{[complex(1), complex(2)]}}    expected=STARTS: TypeError:
 
 Get From List
-    ${value} =    Get From List    ${L4}    1
-    Should Be Equal As Integers    ${value}    42
-    ${value} =    Get From List    ${L4}    -2
-    Should Be Equal As Integers    ${value}    43
+    [Template]    Verify Result
+    Get From List    ${L4}    1     expected=42    type=int
+    Get From List    ${L4}    -2    expected=43    type=str
 
-Get From List With Invalid Index
-    [Documentation]    FAIL ${INDEX ERROR}
-    Get From List    ${L3}    index
-
-Get From List Out Of List Index
-    [Documentation]    FAIL ${LIST OUT OF RANGE}
-    Get From List    ${L3}    10
+Get From List with invalid index
+    [Template]    Verify Error
+    Get From List    ${L3}    invalid    expected=${INDEX ERROR}
+    Get From List    ${L3}    10         expected=${OUT OF RANGE}
 
 Get Slice From List
-    ${values} =    Get Slice From List    ${L4}    1    2
-    Compare To Expected String    ${values}    [42]
-    ${values} =    Get Slice From List    ${L4}    1
-    Compare To Expected String    ${values}    [42, '43', '44']
-    ${values} =    Get Slice From List    ${L4}    ${EMPTY}    2
-    Compare To Expected String    ${values}    ['41', 42]
-    ${values} =    Get Slice From List    ${L4}
-    Should Be Equal    ${values}    ${L4}
+    [Template]    Verify Result
+    Get Slice From List    ${L4}                expected=${L4}
+    Get Slice From List    ${L4}    1           expected=[42, '43', '44']
+    Get Slice From List    ${L4}    1    2      expected=[42]
+    Get Slice From List    ${L4}    end=2       expected=['41', 42]
+    Get Slice From List    ${L4}    100         expected=[]
+    Get Slice From List    ${L4}    2    100    expected=['43', '44']
 
-Get Slice From List With Invalid Start Index
-    [Documentation]    FAIL ${INDEX ERROR}
-    Get Slice From List    ${L4}    index    2
+Get Slice From List with empty string as start index is deprecated
+    [Template]    Verify Result
+    Get Slice From List    ${L4}    ${EMPTY}    2    expected=['41', 42]
 
-Get Slice From List With Invalid Stop Index
-    [Documentation]    FAIL ${INDEX ERROR}
-    Get Slice From List    ${L4}    2    index
-
-Get Slice From List With Out Of List Index
-    ${values} =    Get Slice From List    ${L3}    10    10
-    Should Be Equal    ${values}    ${L0}
+Get Slice From List with invalid index
+    [Template]    Verify Error
+    Get Slice From List    ${L4}    invalid    2    expected=${START ERROR2}
+    Get Slice From List    ${L4}    2    invalid    expected=${END ERROR}
 
 List Should Contain Value
-    List Should Contain Value    ${L1}    1
+    List Should Contain Value    ${L1}      1
+    List Should Contain Value    ${DICT}    a
 
 List Should Contain Value, Value Not Found
     [Documentation]    FAIL [ 1 ] does not contain value '2'.
@@ -220,8 +228,15 @@ List Should Contain Value, Value Not Found And Own Error Message
     [Documentation]    FAIL My error message!
     List Should Contain Value    ${L1}    2    My error message!
 
+List Should Contain Value, Ignore Case
+    List Should Contain Value    ['a', 'b']    value=A    ignore_case=True
+
+List Should Contain Value, Ignore Case And Nested List and Dictionary
+    List Should Contain Value    ['a', ['b', 'c']]    ${{['B', 'C']}}    ignore_case=True
+
 List Should Not Contain Value
-    List Should Not Contain Value    ${L1}    2
+    List Should Not Contain Value    ${L1}      2
+    List Should Not Contain Value    ${DICT}    2
 
 List Should Not Contain Value, Value Found
     [Documentation]    FAIL [ 1 ] contains value '1'.
@@ -231,19 +246,22 @@ List Should Not Contain Value, Value Found And Own Error Message
     [Documentation]    FAIL My error message!
     List Should Not Contain Value    ${L1}    1    My error message!
 
+List Should Not Contain Value, Ignore Case Does Contain Value
+    [Documentation]  FAIL [ a | b ] contains value 'A'.
+    List Should Not Contain Value    ['a', 'b']    value=A    ignore_case=True
+
 List Should Not Contain Duplicates With No Duplicates
-    ${generator}    ${tuple} =    Evaluate    (c for c in 'abcABC'), (0, 1, 2, '0', '1', '2')
-    FOR    ${list}    IN    ${L0}    ${L1}    ${L2}    ${L3}    ${L4}    ${generator}    ${tuple}
+    FOR    ${list}    IN    ${L0}    ${L1}    ${L2}    ${L3}    ${L4}    ${TUPLE}
         List Should Not Contain Duplicates    ${list}
     END
 
 List Should Not Contain Duplicates Is Case And Space Sensitive
-    ${list} =    Create List    item    ITEM    i tem    i t e m    ITE_m
+    VAR    @{list}    item    ITEM    i tem    i t e m    ITE_m
     List Should Not Contain Duplicates    ${list}
 
 List Should Not Contain Duplicates With One Duplicate
     [Documentation]    FAIL 'item' found multiple times.
-    ${list} =    Create List    item    item    another item    fourth item    ITEM
+    VAR    @{list}    item    item    another item    fourth item    ITEM
     List Should Not Contain Duplicates    ${list}
 
 List Should Not Contain Duplicates With Multiple Duplicates
@@ -253,18 +271,23 @@ List Should Not Contain Duplicates With Multiple Duplicates
 
 List Should Not Contain Duplicates With Custom Error Message
     [Documentation]    FAIL My special error
-    List Should Not Contain Duplicates    ${L0}    This would be the error but this time the keyword passes
-    ${list} =    Evaluate    (42,) * 42
-    List Should Not Contain Duplicates    ${list}    My special error
+    List Should Not Contain Duplicates    ${L0}           Not used custom error
+    List Should Not Contain Duplicates    ${{[6] * 7}}    My special error
+
+List Should Not Contain Duplicates With Ignore Case
+    [Documentation]    FAIL 'a' and 'c' found multiple times.
+    List Should Not Contain Duplicates    ['A', 'B', 'C', 'a', 'c']    ignore_case=True
 
 Lists Should Be Equal
-    Lists Should Be Equal    ${L4}    ${L4}
-    Lists Should Be Equal    ${L2}    ${L2}
-    Lists Should Be Equal    ${L0}    ${L0}
-
-List and Tuple should be equal
-    ${t0}=    Evaluate    tuple($L0)
-    Lists Should Be Equal    ${t0}    ${L0}
+    [Template]    Lists Should Be Equal
+    ${L0}        ${L0}
+    ${L2}        ${L2}
+    ${LONG}      ${LONG}
+    ${TUPLE}     ${L2}
+    ${L2}        ${TUPLE}
+    ${DICT}      ['a', 2]
+    ${SET}       ['x']
+    (1, 2, 3)    [1, 2, 3]
 
 Lists Should Be Equal With Different Lengths
     [Documentation]    FAIL Lengths are different: 1 != 4
@@ -303,8 +326,7 @@ Lists Should Be Equal With Named Indices As List
     ...    Index 0 (a): 11 != 10
     ...    Index 1 (b): 12 (integer) != 12 (string)
     ...    Index 2 (c): 13 != 14
-    ${names} =    Create List    a    b    c    ignored
-    Lists Should Be Equal    ${L3}    ${L3B}    names=${names}
+    Lists Should Be Equal    ${L3}    ${L3B}    names=['a', 'b', 'c', 'ignored']
 
 Lists Should Be Equal With Named Indices As List With Too Few Values
     [Documentation]    FAIL My message
@@ -312,63 +334,79 @@ Lists Should Be Equal With Named Indices As List With Too Few Values
     ...    Index 0 (a): 11 != 10
     ...    Index 1 (b): 12 (integer) != 12 (string)
     ...    Index 2: 13 != 14
-    ${names} =    Create List    a    b
-    Lists Should Be Equal    ${L3}    ${L3B}    My message    names=${names}
+    Lists Should Be Equal    ${L3}    ${L3B}    My message    names=${{['a', 'b']}}
 
 Lists Should Be Equal With Named Indices As Dictionary
     [Documentation]    FAIL Lists are different:
     ...    Index 0 (a): 11 != 10
     ...    Index 1 (b): 12 (integer) != 12 (string)
     ...    Index 2 (c): 13 != 14
-    ${names} =    Create Dictionary    0=a    1=b    2=c    42=ignored
-    Lists Should Be Equal    ${L3}    ${L3B}    names=${names}
+    Lists Should Be Equal    ${L3}    ${L3B}    names={0: 'a', '1': 'b', 2: 'c', 42: 'ignored'}
 
 Lists Should Be Equal With Named Indices As Dictionary With Too Few Values
     [Documentation]    FAIL Lists are different:
     ...    Index 0 (a): 11 != 10
     ...    Index 1: 12 (integer) != 12 (string)
     ...    Index 2 (c): 13 != 14
-    ${names} =    Create Dictionary    0=a    2=c
-    Lists Should Be Equal    ${L3}    ${L3B}    names=${names}
+    Lists Should Be Equal    ${L3}    ${L3B}    names=${{{0: 'a', '2': 'c'}}}
 
 Lists Should Be Equal Ignore Order
-    ${list1} =    Create List    A    B    C    D
-    ${list2} =    Create List    D    B    C    A
+    VAR    @{list1}    A    B    C    D
+    VAR    @{list2}    D    B    C    A
     Lists Should Be Equal    ${list1}    ${list2}    ignore_order=True
+
+Lists Should Be Equal With Ignore Case
+    [Template]    Lists Should Be Equal
+    ${L0}                       ${L0}                        ignore_case=True
+    ${LONG}                     ${LONG}                      ignore_case=True
+    \['a', 'b', 'c', 1, 2]       ['A', 'B', 'C', 1, 2]       ignore_case=True
+    (['a', {'b': 'c'}], 'd')     [['A', {'B': 'C'}], 'D']    ignore_case=True
+
+Lists Should be equal with Ignore Case and Order
+    [Template]    Lists Should Be Equal
+    \['a', 'b', 'c']    ['B', 'C', 'A']    ignore_case=True    ignore_order=True
+    \[('A', 'B')]       [('b', 'a')]       ignore_case=True    ignore_order=True
+
+Ignore Order Is Recursive
+    Lists Should Be Equal    [(1, 2, 3), (4, 5, 6)]    [(6, 4, 5), (3, 1, 2)]    ignore_order=yes
 
 List Should Contain Sub List
     List Should Contain Sub List    ${LONG}    ${L4}
 
 List Should Contain Sub List With Missing Values
-    [Documentation]    FAIL Following values were not found from first list: 1, 1, 2, 1, 2
+    [Documentation]    FAIL Following values are missing: '1', '1', '2', '1' and '2'
     List Should Contain Sub List    ${L4}    ${LONG}
+
+List Should Contain Sub List When The Only Missing Value Is Empty String
+    [Documentation]    FAIL Following values are missing: ''
+    List Should Contain Sub List    ${L4}    ${{['41', 42, '', '43']}}
 
 List Should Contain Sub List With Missing Values And Own Error Message
     [Documentation]    FAIL My error message!
-    List Should Contain Sub List    ${L4}    ${LONG}    My error message!    No Values
+    List Should Contain Sub List    ${L4}    ${LONG}    My error message!    values=no
 
 List Should Contain Sub List With Missing Values And Own And Default Error Messages
     [Documentation]    FAIL My error message!
-    ...    Following values were not found from first list: 1, 1, 2, 1, 2
-    List Should Contain Sub List    ${L4}    ${LONG}    My error message!    values=please
+    ...    Following values are missing: 'x' and 'y'
+    List Should Contain Sub List    ${L4}    ${{'x', 'y'}}    My error message!    values=please
 
-Log List With Different Log Levels
-    Log List    ${L3}
+List Should Contain Sub List With Ignore Case
+    List Should Contain Sub List    ['A', 'b', 'C']    ['B', 'c']    ignore_case=True
+
+'NO VALUES' is deprecated
+    [Documentation]    FAIL Message
+    Lists Should Be Equal    ${L4}    ${L4}    values=NO VALUES
+    List Should Contain Sub List    ${L4}    ${LONG}    Message    no values
+
+Log List
+    Log List    ${L0}
+    Log List    ${{tuple($L3)}}
+    Log List    ${L3}    INFO
     Log List    ${L3}    tRAce
     Log List    ${L3}    warn
     Log List    ${L3}    DEbug
-    Log List    ${L3}    INFO
 
-Log List With Different Lists
-    Log List    ${L0}
-    Log List    ${L1}
-    ${tuple} =    Evaluate    (1, 2, 3)
-    ${list} =    Create List    ${tuple}
-    Log List    ${list}
-    ${list} =    Create List    ${tuple}    ${3.12}
-    Log List    ${list}
-
-Count Matches In List Case Insensitive
+Get Match Count, Case Insensitive
     [Template]    Match Count Should Be
     1    ${STRINGS}    a
     0    ${STRINGS}    A
@@ -377,23 +415,22 @@ Count Matches In List Case Insensitive
     2    ${STRINGS}    b       case_insensitive=True
     1    ${STRINGS}    b
 
-Count Matches In List Whitespace Insensitive
+Get Match Count, Whitespace Insensitive
     [Template]    Match Count Should Be
     4    ${WHITESPACE_STRINGS}    word     whitespace_insensitive=True    case_insensitive=True
     3    ${WHITESPACE_STRINGS}    word     whitespace_insensitive=yes
     0    ${WHITESPACE_STRINGS}    words    whitespace_insensitive=${1}    case_insensitive=${2}
 
-Count Matches In List Regexp
+Get Match Count, Regexp
     [Template]    Match Count Should Be
     2    ${STRINGS}    regexp=.*a.*
     1    ${STRINGS}    regexp=wOrD
     2    ${STRINGS}    regexp=word     case_insensitive=True
     2    ${STRINGS}    regexp=wo.*     case_insensitive=True
-    7    ${STRINGS}    regexp=[a-z]    case_insensitive=True
     13   ${STRINGS}    regexp=.*       case_insensitive=False
     6    ${STRINGS}    regexp=.$       case_insensitive=No
 
-Count Matches In List Glob
+Get Match Count, Glob
     [Template]    Match Count Should Be
     2    ${STRINGS}    glob=*a*
     1    ${STRINGS}    glob=wOrD
@@ -402,138 +439,186 @@ Count Matches In List Glob
     13   ${STRINGS}    glob=*       case_insensitive=
     6    ${STRINGS}    glob=?       case_insensitive=${FALSE}
 
-Get Matches In List Case Insensitive
+Get Match Count, regexp change affects results
+    [Template]    Match Count Should Be
+    13   ${STRINGS}    regexp=.
+    13   ${STRINGS}    regexp=.*
+    6    ${STRINGS}    regexp=.$
+
+Get Matches, Case Insensitive
     [Template]    List Should Equal Matches
     ${STRINGS}    a       ${False}    ${False}    a
-    ${STRINGS}    A       ${True}    ${False}     a
-    ${STRINGS}    A       ${False}    ${False}
-    ${STRINGS}    word    ${True}    ${False}     wOrD    WOrd
-    ${STRINGS}    b       ${True}    ${False}     B       b
-    ${STRINGS}    b       ${False}    ${False}    b
+    ${STRINGS}    A       ${True}     ${False}    a
+    ${STRINGS}    A       False       false
+    ${STRINGS}    word    yes         no          wOrD    WOrd
+    ${STRINGS}    b       1           0           B       b
+    ${STRINGS}    b       no          NO          b
 
-Get Matches In List Whitespace Insensitive
+Get Matches, Whitespace Insensitive
     [Template]    List Should Equal Matches
-    ${WHITESPACE_STRINGS}    word    ${False}   ${True}    w o r d    w\no\nr\nd    w\no r\nd
+    ${WHITESPACE_STRINGS}    word    False      True    w o r d    w\no\nr\nd    w\no r\nd
     ${WHITESPACE_STRINGS}    word    ${True}    ${True}    w o r d    w\no\nr\nd    w\no r\nd    W O R D
-    ${WHITESPACE_STRINGS}    words   ${True}    ${True}
+    ${WHITESPACE_STRINGS}    words   yes        yes
 
-Get Matches In List Regexp
+Get Matches, Regexp
     [Template]    List Should Equal Matches
-    ${STRINGS}    regexp=.*a.*    ${False}    ${False}    a      regexp=blah
+    ${STRINGS}    regexp=.*a.*    False       False       a      regexp=blah
     ${STRINGS}    regexp=wOrD     ${False}    ${False}    wOrD
-    ${STRINGS}    regexp=word     ${True}     ${False}    wOrD    WOrd
-    ${STRINGS}    regexp=wo.*     ${True}     ${False}    wOrD    WOrd
-    ${STRINGS}    regexp=[a-z]    ${True}     ${False}    a       B    b    wOrD    WOrd    regexp=blah    glob=test
-    ${STRINGS}    regexp=.*       ${False}    ${False}    @{STRINGS}
-    ${STRINGS}    regexp=.$       ${False}    ${False}    a       B    b    1    2    3
+    ${STRINGS}    regexp=word     true        false       wOrD    WOrd
+    ${STRINGS}    regexp=wo.*     yes         no          wOrD    WOrd
+    ${STRINGS}    regexp=.*       0           0           @{STRINGS}
+    ${STRINGS}    regexp=.$       ${0}        ${0}        a       B    b    1    2    3
 
-Get Matches In List Glob
+Get Matches, Glob
     [Template]    List Should Equal Matches
-    ${STRINGS}    glob=*a*     ${False}    ${False}    a       regexp=blah
-    ${STRINGS}    glob=wOrD    ${False}    ${False}    wOrD
-    ${STRINGS}    glob=word    ${True}     ${False}    wOrD    WOrd
-    ${STRINGS}    glob=wo*     ${True}     ${False}    wOrD    WOrd
-    ${STRINGS}    glob=*       ${False}    ${False}    @{STRINGS}
+    ${STRINGS}    glob=*a*     False       False       a       regexp=blah
+    ${STRINGS}    glob=wOrD    false       false       wOrD
+    ${STRINGS}    glob=word    yes         no          wOrD    WOrd
+    ${STRINGS}    glob=wo*     ${1}        ${0}        wOrD    WOrd
+    ${STRINGS}    glob=*       False       FALSE       @{STRINGS}
     ${STRINGS}    glob=?       ${False}    ${False}    a       B    b    1    2    3
 
-List Should Contain Value Case Insensitive
+Get Matches, regexp change affects results
+    [Template]    List Should Equal Matches
+    ${STRINGS}    regexp=w      False    False    wOrD
+    ${STRINGS}    regexp=w.*    False    False    wOrD
+    ${STRINGS}    regexp=w$     False    False
+
+Should Contain Match, Case Insensitive
     [Template]    Should Contain Match
     ${STRINGS}    a
-    ${STRINGS}    a       case_insensitive=True
-    ${STRINGS}    A       case_insensitive=True
-    ${STRINGS}    b       case_insensitive=True
-    ${STRINGS}    B       case_insensitive=True
-    ${STRINGS}    word    case_insensitive=True
-    ${STRINGS}    WORD    case_insensitive=True
-    ${STRINGS}    WoRd    case_insensitive=True
     ${STRINGS}    \${cmd list}
+    # Old config.
+    ${STRINGS}    a       case_insensitive=True
+    ${STRINGS}    A       case_insensitive=yes
+    ${STRINGS}    b       case_insensitive=${True}
+    ${STRINGS}    B       case_insensitive=xxx
+    ${STRINGS}    word    case_insensitive=${1}
+    ${STRINGS}    WORD    case_insensitive=TRUE
+    ${STRINGS}    WoRd    case_insensitive=true
+    # New config.
+    ${STRINGS}    a       ignore_case=True
+    ${STRINGS}    A       ignore_case=yes
+    ${STRINGS}    b       ignore_case=${True}
+    ${STRINGS}    B       ignore_case=xxx
+    ${STRINGS}    word    ignore_case=${1}
+    ${STRINGS}    WORD    ignore_case=TRUE
+    ${STRINGS}    WoRd    ignore_case=true
 
-List Should Contain Value Whitespace Insensitive
+Should Contain Match, Whitespace Insensitive
     [Template]    Should Contain Match
+    # Old config.
     ${WHITESPACE_STRINGS}    word           whitespace_insensitive=1    case_insensitive=${0}
     ${WHITESPACE_STRINGS}    wOrD           whitespace_insensitive=2    case_insensitive=${1}
     ${WHITESPACE_STRINGS}    regexp=wo.*    whitespace_insensitive=3
     ${WHITESPACE_STRINGS}    regexp=Wo.*    whitespace_insensitive=4    case_insensitive=${2}
     ${WHITESPACE_STRINGS}    glob=wo*       whitespace_insensitive=5
     ${WHITESPACE_STRINGS}    glob=Wo*       whitespace_insensitive=6    case_insensitive=${3}
+    # New config.
+    ${WHITESPACE_STRINGS}    word           ignore_whitespace=1    ignore_case=${0}
+    ${WHITESPACE_STRINGS}    wOrD           ignore_whitespace=2    ignore_case=${1}
+    ${WHITESPACE_STRINGS}    regexp=wo.*    ignore_whitespace=3
+    ${WHITESPACE_STRINGS}    regexp=Wo.*    ignore_whitespace=4    ignore_case=${2}
+    ${WHITESPACE_STRINGS}    glob=wo*       ignore_whitespace=5
+    ${WHITESPACE_STRINGS}    glob=Wo*       ignore_whitespace=6    ignore_case=${3}
 
-List Should Contain Value Regexp
+Should Contain Match, Regexp
     [Template]    Should Contain Match
     ${STRINGS}    regexp=.*a.*
     ${STRINGS}    regexp=wOrD
     ${STRINGS}    regexp=word     case_insensitive=True
-    ${STRINGS}    regexp=wo.*     case_insensitive=True
-    ${STRINGS}    regexp=[a-z]    case_insensitive=True
+    ${STRINGS}    regexp=wo.*     case_insensitive=yes
+    ${STRINGS}    regexp=[a-z]    case_insensitive=${1}
     ${STRINGS}    regexp=[a-zA-Z]
     ${STRINGS}    regexp=.*
     ${STRINGS}    regexp=\\w{4}
     ${STRINGS}    regexp=glob=.*
 
-List Should Contain Value Glob
+Should Contain Match, Glob
     [Template]    Should Contain Match
     ${STRINGS}    glob=*a*
     ${STRINGS}    glob=wOrD
     ${STRINGS}    glob=word        case_insensitive=True
-    ${STRINGS}    glob=wo*         case_insensitive=True
+    ${STRINGS}    glob=wo*         case_insensitive=true
     ${STRINGS}    glob=*
     ${STRINGS}    glob=?
     ${STRINGS}    glob=????
     ${STRINGS}    glob=?O??
-    ${STRINGS}    glob=?o??        case_insensitive=True
-    ${STRINGS}    glob=regexp=*    case_insensitive=True
+    ${STRINGS}    glob=?o??        case_insensitive=yes
+    ${STRINGS}    glob=regexp=*    case_insensitive=xxx
 
-List Should Contain Value, Value Not Found Case Insensitive
+Should Contain Match, Value Not Found Case Insensitive
     [Documentation]    FAIL [ wOrD ] does not contain match for pattern 'words'.
     Should Contain Match    ${STRING}    words    case_insensitive=True
 
-List Should Contain Value, Value Not Found Whitespace Insensitive
+Should Contain Match, Value Not Found Whitespace Insensitive
     [Documentation]    FAIL [ w o r d | w\no\nr\nd | w\no r\nd | W O R D ] does not contain match for pattern 'words'.
     Should Contain Match    ${WHITESPACE_STRINGS}    words    whitespace_insensitive=True
 
-List Should Contain Value, Value Not Found Regexp
+Should Contain Match, Value Not Found Regexp
     [Documentation]    FAIL [ wOrD ] does not contain match for pattern 'regexp=wOrD.'.
     Should Contain Match    ${STRING}    regexp=wOrD.
 
-List Should Contain Value, Value Not Found Glob
+Should Contain Match, Value Not Found Glob
     [Documentation]    FAIL [ wOrD ] does not contain match for pattern 'glob=wOrD?'.
     Should Contain Match    ${STRING}    glob=wOrD?
 
-List Should Contain Value, Value Not Found And Own Error Message Case Insensitive
+Should Contain Match, Value Not Found And Own Error Message Case Insensitive
     [Documentation]    FAIL My error message!
     Should Contain Match    ${STRING}    words    My error message!    case_insensitive=True
 
-List Should Contain Value, Value Not Found And Own Error Message Whitespace Insensitive
+Should Contain Match, Value Not Found And Own Error Message Whitespace Insensitive
     [Documentation]    FAIL My error message!
     Should Contain Match    ${WHITESPACE_STRINGS}    words    My error message!    whitespace_insensitive=True
 
-List Should Contain Value, Value Not Found And Own Error Message Regexp
+Should Contain Match, Value Not Found And Own Error Message Regexp
     [Documentation]    FAIL My error message!
     Should Contain Match    ${STRING}    regexp=wOrD.    My error message!
 
-List Should Contain Value, Value Not Found And Own Error Message Glob
+Should Contain Match, Value Not Found And Own Error Message Glob
     [Documentation]    FAIL My error message!
     Should Contain Match    ${STRING}    glob=wOrD?    My error message!
 
-List Should Not Contain Value Case Insensitive
-    [Template]    Should Not Contain Match
-    ${STRINGS}    words    case_insensitive=True
-    ${STRINGS}    5        case_insensitive=True
-    ${STRINGS}    word
-    ${STRINGS}    AB       case_insensitive=True
+Should Contain Match, regexp change affects results
+    [Documentation]    FAIL    No match!
+    [Template]    Should Contain Match
+    ${STRINGS}    regexp=wOr
+    ${STRINGS}    regexp=wOr.*
+    ${STRINGS}    regexp=wOr$    msg=No match!
 
-List Should Not Contain Value Whitespace Insensitive
+Should Not Contain Match, Case Insensitive
+    [Template]    Should Not Contain Match
+    ${STRINGS}    word
+    # Old config.
+    ${STRINGS}    words    case_insensitive=True
+    ${STRINGS}    5        case_insensitive=yes
+    ${STRINGS}    AB       case_insensitive=${True}
+    # New config.
+    ${STRINGS}    words    ignore_case=True
+    ${STRINGS}    5        ignore_case=yes
+    ${STRINGS}    AB       ignore_case=${True}
+
+Should Not Contain Match, Whitespace Insensitive
     [Template]    Should Not Contain Match
     ${WHITESPACE_STRINGS}    wOrD
-    ${WHITESPACE_STRINGS}    wOrD                whitespace_insensitive=True
-    ${WHITESPACE_STRINGS}    wOrDs               whitespace_insensitive=True    case_insensitive=True
     ${WHITESPACE_STRINGS}    regexp=.*words.*
-    ${WHITESPACE_STRINGS}    regexp=.*words.*    whitespace_insensitive=True
-    ${WHITESPACE_STRINGS}    regexp=.*words.*    whitespace_insensitive=True    case_insensitive=True
     ${WHITESPACE_STRINGS}    glob=*words*
-    ${WHITESPACE_STRINGS}    glob=*words*        whitespace_insensitive=True
-    ${WHITESPACE_STRINGS}    glob=*words*        whitespace_insensitive=True    case_insensitive=True
+    # Old config.
+    ${WHITESPACE_STRINGS}    wOrD                whitespace_insensitive=True
+    ${WHITESPACE_STRINGS}    wOrDs               whitespace_insensitive=true    case_insensitive=true
+    ${WHITESPACE_STRINGS}    regexp=.*words.*    whitespace_insensitive=${True}
+    ${WHITESPACE_STRINGS}    regexp=.*words.*    whitespace_insensitive=yes     case_insensitive=yes
+    ${WHITESPACE_STRINGS}    glob=*words*        whitespace_insensitive=1
+    ${WHITESPACE_STRINGS}    glob=*words*        whitespace_insensitive=${1}    case_insensitive=${2}
+    # New config.
+    ${WHITESPACE_STRINGS}    wOrD                ignore_whitespace=True
+    ${WHITESPACE_STRINGS}    wOrDs               ignore_whitespace=true         ignore_case=true
+    ${WHITESPACE_STRINGS}    regexp=.*words.*    ignore_whitespace=${True}
+    ${WHITESPACE_STRINGS}    regexp=.*words.*    ignore_whitespace=yes          ignore_case=yes
+    ${WHITESPACE_STRINGS}    glob=*words*        ignore_whitespace=1
+    ${WHITESPACE_STRINGS}    glob=*words*        ignore_whitespace=${1}         ignore_case=${2}
 
-List Should Not Contain Value Regexp
+Should Not Contain Match, Regexp
     [Template]    Should Not Contain Match
     ${STRINGS}    regexp=.*words.*
     ${STRINGS}    regexp=[5-7]
@@ -541,120 +626,141 @@ List Should Not Contain Value Regexp
     ${STRINGS}    regexp=(AB)         case_insensitive=True
     ${STRINGS}    regexp=\\w{9}
 
-List Should Not Contain Value Glob
+Should Not Contain Match, Glob
     [Template]    Should Not Contain Match
     ${STRINGS}    glob=*words*    case_insensitive=True
-    ${STRINGS}    glob=[5]        case_insensitive=True
+    ${STRINGS}    glob=[5]        case_insensitive=yes
     ${STRINGS}    glob=*word?
-    ${STRINGS}    glob=AB*        case_insensitive=True
+    ${STRINGS}    glob=AB*        case_insensitive=${True}
 
-List Should Not Contain Value, Value Found Case Insensitive
+Should Not Contain Match, Value Found Case Insensitive
     [Documentation]    FAIL [ wOrD ] contains match for pattern 'word'.
     Should Not Contain Match    ${STRING}    word    case_insensitive=True
 
-List Should Not Contain Value, Value Found Whitespace Insensitive
+Should Not Contain Match, Value Found Whitespace Insensitive
     [Documentation]    FAIL [ w o r d | w\no\nr\nd | w\no r\nd | W O R D ] contains match for pattern 'word'.
     Should Not Contain Match    ${WHITESPACE_STRINGS}    word    whitespace_insensitive=True
 
-List Should Not Contain Value, Value Found Regexp
+Should Not Contain Match, Value Found Regexp
     [Documentation]    FAIL [ wOrD ] contains match for pattern 'regexp=.*w.*'.
     Should Not Contain Match    ${STRING}    regexp=.*w.*
 
-List Should Not Contain Value, Value Found Glob
+Should Not Contain Match, Value Found Glob
     [Documentation]    FAIL [ wOrD ] contains match for pattern 'glob=*'.
     Should Not Contain Match    ${STRING}    glob=*
 
-List Should Not Contain Value, Value Found And Own Error Message Case Insensitive
+Should Not Contain Match, Value Found And Own Error Message Case Insensitive
     [Documentation]    FAIL My error message!
     Should Not Contain Match    ${STRING}    word    My error message!    case_insensitive=True
 
-List Should Not Contain Value, Value Found And Own Error Message Regexp
+Should Not Contain Match, Value Found And Own Error Message Regexp
     [Documentation]    FAIL My error message!
     Should Not Contain Match    ${STRING}    regexp=.*w.*    My error message!
 
-List Should Not Contain Value, Value Found And Own Error Message Glob
+Should Not Contain Match, Value Found And Own Error Message Glob
     [Documentation]    FAIL My error message!
     Should Not Contain Match    ${STRING}    glob=*    My error message!
 
-Check List Error
+Should Not Contain Match, regexp change affects results
+    Run Keyword And Expect Error    Match!
+    ...    Should Not Contain Match    ${STRINGS}    regexp=reg    msg=Match!
+    Run Keyword And Expect Error    Match!
+    ...    Should Not Contain Match    ${STRINGS}    regexp=reg.*    msg=Match!
+    Should Not Contain Match    ${STRINGS}    regexp=reg$
+
+Validate argument conversion errors
     [Template]    Validate invalid argument error
-    Append to list                        xyz
-    Combine Lists                         I am a string. Not a list.
-    Combine Lists                         ${L0}    I am a string. Not a list.    position=2
-    Combine Lists                         I am a string. Not a list.    ${L0}
-    Copy list
-    Count values in list                  I am a string. Not a list.    xyz
-    Get from list                         I am a string. Not a list.    0
-    Get Index From List                   I am a string. Not a list.    a
-    Get Match Count                       I am a string. Not a list.    abc
-    Get Matches                           I am a string. Not a list.    abc
-    Get slice from list
-    Insert into list                      I am a string. Not a list.    0    a
-    List Should Contain Sub List          I am a string. Not a list.    ${L0}
-    List Should Contain Sub List          ${L0}    I am a string. Not a list.    position=2
-    List should contain value             I am a string. Not a list.    a
-    List Should Not Contain Duplicates    xyz
-    List Should Not Contain Value         I am a string. Not a list.    x
-    Lists Should Be Equal                 I am a string. Not a list.    ${L0}
-    Lists Should Be Equal                 ${L0}    I am a string. Not a list.    position=2
-    Log List
-    Remove Duplicates
-    Remove From List                      I am a string. Not a list.    0
-    Remove Values From List               I am a string. Not a list.    a
-    Reverse List
-    Set List Value                        I am a string. Not a list.    0    a
-    Should Contain Match                  I am a string. Not a list.    a
-    Should Not Contain Match              I am a string. Not a list.    xyz
-    Sort List
+    VAR                                   ${invalid_arg}              I am a string. Not a list.
+    Append to list                        xyz                         annotation=Sequence: Invalid expression
+    Combine Lists                         ${invalid_arg}              arg_name=lists
+    Combine Lists                         ${L0}   ${invalid_arg}      arg_name=lists    invalid_argument=${invalid_arg}
+    Combine Lists                         ${invalid_arg}    ${L0}     arg_name=lists
+    Copy list                                                         annotation=Sequence: Invalid expression
+    Count values in list                  ${invalid_arg}    xyz       annotation=Sequence: Invalid expression
+    Get from list                         ${invalid_arg}    0         annotation=Sequence: Invalid expression
+    Get Index From List                   ${invalid_arg}    a         annotation=Sequence: Invalid expression
+    Get Match Count                       ${invalid_arg}    abc       arg_name=list
+    Get Matches                           ${invalid_arg}    abc       arg_name=list
+    Get slice from list                                               annotation=Sequence: Invalid expression
+    Insert into list                      ${invalid_arg}    0    a    annotation=Sequence: Invalid expression
+    List Should Contain Sub List          ${invalid_arg}    ${L0}     arg_name=list1
+    List Should Contain Sub List          ${L0}    ${invalid_arg}     arg_name=list2    invalid_argument=${invalid_arg}
+    List Should Contain Value             ${invalid_arg}    a
+    List Should Not Contain Duplicates    xyz                         annotation=Sequence: Invalid expression
+    List Should Not Contain Value         ${invalid_arg}    x
+    Lists Should Be Equal                 ${invalid_arg}    ${L0}     arg_name=list1
+    Lists Should Be Equal                 ${L0}    ${invalid_arg}     arg_name=list2    invalid_argument=${invalid_arg}
+    Log List                                                          annotation=Sequence: Invalid expression
+    Remove Duplicates                                                 annotation=Sequence: Invalid expression
+    Remove From List                      ${invalid_arg}    0         annotation=Sequence: Invalid expression
+    Remove Values From List               ${invalid_arg}    a         annotation=Sequence: Invalid expression
+    Reverse List                                                      annotation=Sequence: Invalid expression
+    Set List Value                        ${invalid_arg}    0    a    annotation=Sequence: Invalid expression
+    Should Contain Match                  ${invalid_arg}    a         arg_name=list
+    Should Not Contain Match              ${invalid_arg}    xyz       arg_name=list
+    Sort List                                                         annotation=Sequence: Invalid expression
+
+Bytes normalization
+    [Documentation]    FAIL    'rf' found multiple times.
+    List Should Contain Value             ${{[b'\x00', b'RF']}}    ${{b'rf'}}      ignore_case=True
+    List Should Not Contain Duplicates    ${{[b'RF', b'rf']}}                      ignore_case=True
 
 *** Keywords ***
 Validate invalid argument error
-    [Arguments]    ${keyword}    ${argument}=I'm not a list, I'm a string.    @{args}    ${type}=string    ${position}=1
-    Run keyword and expect error
-    ...    TypeError: Expected argument ${position} to be a list or list-like, got ${type} instead.
+    [Arguments]    ${keyword}    ${argument}=I'm not a list, I'm a string.    @{args}    ${arg_name}=list_    ${annotation}=Sequence, Mapping or set    ${invalid_argument}=${NONE}
+    IF    not $invalid_argument
+        VAR    ${invalid_argument}    ${argument}
+    END
+    Run Keyword And Expect Error
+    ...    ValueError: Argument '${arg_name}' got value '${invalid_argument}' that cannot be converted to ${annotation}.
     ...    ${keyword}    ${argument}    @{args}
 
 Create Lists For The Tests
-    ${L0} =    Create List
-    Set Test Variable    \${L0}
-    ${L1} =    Create List    1
-    Set Test Variable    \${L1}
-    ${L2} =    Create List    1    ${2}
-    Set Test Variable    \${L2}
-    ${L3} =    Create List    11    ${12}    13
-    Set Test Variable    \${L3}
-    ${L3B} =    Create List    10    12    14
-    Set Test Variable    \${L3B}
-    ${L4} =    Create List    41    ${42}    43    44
-    Set Test Variable    \${L4}
-    ${LONG} =    Combine Lists    ${L1}    ${L2}    ${L4}    ${L2}
-    Set Test Variable    \${LONG}
-    ${STRINGS} =    Create List    a    B    b    wOrD    WOrd
-    ...    !@#$%^&*()_+-=    \${cmd list}    1    2    3    äö
-    ...    regexp=blah    glob=test
-    Set Test Variable    \${STRINGS}
-    ${STRING} =    Create List    wOrD
-    Set Test Variable    \${STRING}
-    ${WHITESPACE_STRINGS} =    Create List    w o r d    w\no\nr\nd    w\no r\nd    W O R D
-    Set Test Variable    \${WHITESPACE_STRINGS}
-
-Insert Into List And Compare
-    [Arguments]    ${list}    ${index}    ${value}    ${expected}
-    Insert Into List    ${list}    ${index}    ${value}
-    Compare To Expected String    ${list}    ${expected}
-
-Get Random Item And Add It To List
-    [Arguments]    ${from list}    ${to list}
-    ${item} =    Get Item From List    Ran Dom    ${from list}
-    Add Item To List    ${to list}    ${item}
+    VAR    @{L0}                                             scope=TEST
+    VAR    @{L1}         1                                   scope=TEST
+    VAR    @{L2}         1        ${2}                       scope=TEST
+    VAR    @{L3}         11       ${12}    13                scope=TEST
+    VAR    @{L3B}        10       12       14                scope=TEST
+    VAR    @{L4}         41       ${42}    43       44       scope=TEST
+    VAR    @{LONG}       @{L1}    @{L2}    @{L4}    @{L2}    scope=TEST
+    VAR    @{STRING}     wOrD                                scope=TEST
+    VAR    @{STRINGS}    a    B    b    wOrD    WOrd
+    ...    !@#$%^&*()_+-=    \${cmd list}    1    2    3
+    ...    äö .    regexp=blah    glob=test                  scope=TEST
+    VAR    @{WHITESPACE STRINGS}
+    ...    w o r d    w\no\nr\nd    w\no r\nd    W O R D     scope=TEST
 
 Match Count Should Be
-    [Arguments]    ${count}    ${list}    ${pattern}    ${case_insensitive}=${False}    ${whitespace_insensitive}=${False}
-    ${actual_count} =    Get Match Count    ${list}    ${pattern}    ${case_insensitive}    ${whitespace_insensitive}
-    Should Be Equal As Integers    ${count}    ${actual_count}    msg=Expected ${count} matches, got ${actual_count} matches for pattern '${pattern}' in ${list}
+    [Arguments]    ${expected}    ${list}    ${pattern}    ${case_insensitive}=False    ${whitespace_insensitive}=False
+    ${count} =    Get Match Count    ${list}    ${pattern}    ${case_insensitive}    ${whitespace_insensitive}
+    Should Be Equal    ${count}    ${expected}    type=int
+    ${count} =    Get Match Count    ${list}    ${pattern}    ignore_case=${case_insensitive}    ignore_whitespace=${whitespace_insensitive}
+    Should Be Equal    ${count}    ${expected}    type=int
 
 List Should Equal Matches
-    [Arguments]    ${list_to_search}    ${pattern}    ${case_insensitive}=${False}    ${whitespace_insensitive}=${False}    @{list}
-    ${list} =    Create List    @{list}
+    [Arguments]    ${list_to_search}    ${pattern}    ${case_insensitive}=False    ${whitespace_insensitive}=False    @{list}
     ${matches} =    Get Matches    ${list_to_search}    ${pattern}    ${case_insensitive}    ${whitespace_insensitive}
     Lists Should Be Equal    ${matches}    ${list}
+    ${matches} =    Get Matches    ${list_to_search}    ${pattern}    ignore_case=${case_insensitive}    ignore_whitespace=${whitespace_insensitive}
+    Lists Should Be Equal    ${matches}    ${list}
+
+Verify Modification
+    [Arguments]    ${keyword}    ${list}    @{args}    ${expected}    ${result}=${None}
+    ${actual} =    Run Keyword    ${keyword}    ${list}    @{args}
+    Should Be Equal    ${list}      ${expected}    type=list
+    IF    not $result
+        VAR    ${result}    ${expected}
+        VAR    ${type}      list
+    ELSE
+        VAR    ${type}      ${None}
+    END
+    Should Be Equal    ${actual}    ${result}    type=${type}
+
+Verify Result
+    [Arguments]    ${keyword}    @{args}    ${expected}    ${type}=list    &{named}
+    ${actual} =    Run Keyword    ${keyword}    @{args}    &{named}
+    Should Be Equal    ${actual}    ${expected}    type=${type}
+
+Verify Error
+    [Arguments]    ${keyword}    @{args}    ${expected}
+    Run Keyword And Expect Error    ${expected}    ${keyword}    @{args}

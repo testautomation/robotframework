@@ -58,15 +58,15 @@ Importing Remote library
 The Remote library needs to know the address of the remote server but
 otherwise importing it and using keywords that it provides is no
 different to how other libraries are used. If you need to use the Remote
-library multiple times in a test suite, or just want to give it a more
-descriptive name, you can import it using the `WITH NAME syntax`_.
+library multiple times in a suite, or just want to give it a more
+descriptive name, you can give it an `alias when importing it`__.
 
 .. sourcecode:: robotframework
 
    *** Settings ***
-   Library    Remote    http://127.0.0.1:8270       WITH NAME    Example1
-   Library    Remote    http://example.com:8080/    WITH NAME    Example2
-   Library    Remote    http://10.0.0.2/example    1 minute    WITH NAME    Example3
+   Library    Remote    http://127.0.0.1:8270       AS    Example1
+   Library    Remote    http://example.com:8080/    AS    Example2
+   Library    Remote    http://10.0.0.2/example    1 minute    AS    Example3
 
 The URL used by the first example above is also the default address
 that the Remote library uses if no address is given.
@@ -98,8 +98,9 @@ is shorter than keyword execution time will interrupt the keyword.
           `http://127.0.0.1:8270/` nor `http://127.0.0.1:8270/my/path` will be
           modified.
 
-__ http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=8270
-__ http://stackoverflow.com/questions/14504450/pythons-xmlrpc-extremely-slow-one-second-per-call
+__ `Setting custom name to library`_
+__ https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=8270
+__ https://stackoverflow.com/questions/14504450/pythons-xmlrpc-extremely-slow-one-second-per-call
 
 Starting and stopping remote servers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -166,7 +167,7 @@ according to the following rules. Other remote servers should behave similarly.
 
 * Other types are converted to strings.
 
-__ http://docs.python.org/library/xmlrpc.client.html#binary-objects
+__ https://docs.python.org/library/xmlrpc.client.html#binary-objects
 
 Remote protocol
 ---------------

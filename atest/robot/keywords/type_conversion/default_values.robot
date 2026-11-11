@@ -72,6 +72,12 @@ Timedelta
 Invalid timedelta
     Check Test Case    ${TESTNAME}
 
+Path
+    Check Test Case    ${TESTNAME}
+
+Invalid Path
+    Check Test Case    ${TESTNAME}
+
 Enum
     Check Test Case    ${TESTNAME}
 
@@ -125,9 +131,6 @@ Unknown types are not converted
     Check Test Case    ${TESTNAME}
 
 Positional as named
-    Check Test Case    ${TESTNAME}
-
-Invalid positional as named
     Check Test Case    ${TESTNAME}
 
 Kwonly

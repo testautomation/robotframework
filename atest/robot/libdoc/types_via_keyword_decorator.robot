@@ -13,7 +13,7 @@ Varargs and kwargs
     Keyword Arguments Should Be     2    *varargs: int    **kwargs: bool
 
 Unknown types
-    Keyword Arguments Should Be     3    unknown: UnknownType    unrecognized: Ellipsis
+    Keyword Arguments Should Be     3    unknown: UnknownType    unrecognized: ...
 
 Non-type annotations
     Keyword Arguments Should Be     4    arg: One of the usages in PEP-3107
@@ -21,3 +21,11 @@ Non-type annotations
 
 Keyword-only arguments
     Keyword Arguments Should Be     5    *    kwo: int    with_default: str = value
+
+Return type
+    Keyword Arguments Should Be     6
+    Return Type Should Be           6    int
+
+Return type as tuple
+    Keyword Arguments Should Be     7    arg: int
+    Return Type Should Be           7    Union    int    float

@@ -22,9 +22,9 @@ but it is also possible to use the :name:`Import Library` keyword.
 Using `Library` setting
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Test libraries are normally imported using the :setting:`Library`
-setting in the Setting section and having the library name in the
-subsequent column. Unlike most of the other data, the library name
+Libraries are normally imported in the Settings section using the
+:setting:`Library` setting with the library name or path as its value.
+Unlike most of the other data, the library name or path
 is both case- and space-sensitive. If a library is in a package,
 the full name including the package name must be used.
 
@@ -40,12 +40,13 @@ __ `Using arguments`_
 
    *** Settings ***
    Library    OperatingSystem
+   Library    path/to/MyLibrary.py
    Library    my.package.TestLibrary
-   Library    MyLibrary    arg1    arg2
+   Library    LibraryAcceptingArguments    arg1    arg2
    Library    ${LIBRARY}
 
-It is possible to import test libraries in `test case files`_,
-`resource files`_ and `test suite initialization files`_. In all these
+It is possible to import test libraries in `suite files`_,
+`resource files`_ and `suite initialization files`_. In all these
 cases, all the keywords in the imported library are available in that
 file. With resource files, those keywords are also available in other
 files using them.
@@ -55,7 +56,7 @@ Using `Import Library` keyword
 
 Another possibility to take a test library into use is using the
 keyword :name:`Import Library` from the BuiltIn_ library. This keyword
-takes the library name and possible arguments similarly as the
+takes the library name or path and possible arguments similarly as the
 :setting:`Library` setting. Keywords from the imported library are
 available in the test suite where the :name:`Import Library` keyword was
 used. This approach is useful in cases where the library is not
@@ -81,12 +82,18 @@ if the library is imported using the :setting:`Library` setting or the
 Using library name
 ~~~~~~~~~~~~~~~~~~
 
-The most common way to specify a test library to import is using its
-name, like it has been done in all the examples in this section. In
-these cases Robot Framework tries to find the class or module
+The most common way to specify a test library to import is using its name.
+In these cases Robot Framework tries to find the class or module
 implementing the library from the `module search path`_. Libraries that
 are installed somehow ought to be in the module search path automatically,
 but with other libraries the search path may need to be configured separately.
+
+.. sourcecode:: robotframework
+
+   *** Settings ***
+   Library    OperatingSystem
+   Library    CustomLibrary    possible    arguments
+   Library    librarymodule.LibraryClass
 
 The biggest benefit of this approach is that when the module search
 path has been configured, often using a custom `start-up script`_,
@@ -115,16 +122,10 @@ Following examples demonstrate these different usages.
    *** Settings ***
    Library    PythonLibrary.py
    Library    relative/path/PythonDirLib/    possible    arguments
-   Library    ${RESOURCES}/Example.class
+   Library    ${RESOURCES}/Example.py
 
-
-A limitation of this approach is that libraries implemented as Python classes `must
-be in a module with the same name as the class`__.
-
-__ `Library name`_
-
-Setting custom name to test library
------------------------------------
+Setting custom name to library
+------------------------------
 
 The library name is shown in test logs before keyword names, and if
 multiple keywords have the same name, they must be used so that the
@@ -145,38 +146,41 @@ __ `Handling keywords with same names`_
 - The library name is misleading or otherwise poor. In this case,
   changing the actual name is, of course, a better solution.
 
-
 The basic syntax for specifying the new name is having the text
-`WITH NAME` (case-sensitive) after the library name and then
-having the new name in the next cell. The specified name is shown in
+`AS` (case-sensitive) after the library name and then
+having the new name after that. The specified name is shown in
 logs and must be used in the test data when using keywords' full name
 (:name:`LibraryName.Keyword Name`).
 
 .. sourcecode:: robotframework
 
    *** Settings ***
-   Library    com.company.TestLib    WITH NAME    TestLib
-   Library    ${LIBRARY}             WITH NAME    MyName
+   Library    packagename.TestLib    AS    TestLib
+   Library    ${LIBRARY}    AS    MyName
 
-Possible arguments to the library are placed into cells between the
-original library name and the `WITH NAME` text. The following example
+Possible arguments to the library are placed between the
+original library name and the `AS` marker. The following example
 illustrates how the same library can be imported several times with
 different arguments:
 
 .. sourcecode:: robotframework
 
    *** Settings ***
-   Library    SomeLibrary    localhost        1234    WITH NAME    LocalLib
-   Library    SomeLibrary    server.domain    8080    WITH NAME    RemoteLib
+   Library    SomeLibrary    localhost        1234    AS    LocalLib
+   Library    SomeLibrary    server.domain    8080    AS    RemoteLib
 
    *** Test Cases ***
-   My Test
+   Example
        LocalLib.Some Keyword     some arg       second arg
        RemoteLib.Some Keyword    another arg    whatever
        LocalLib.Another Keyword
 
 Setting a custom name to a test library works both when importing a
 library in the Setting section and when using the :name:`Import Library` keyword.
+
+.. note:: Prior to Robot Framework 6.0 the marker to use when giving a custom name
+          to a library was `WITH NAME` instead of `AS`. The old syntax continues
+          to work, but it is considered deprecated and will eventually be removed.
 
 Standard libraries
 ------------------
@@ -236,7 +240,7 @@ Any test library that is not one of the standard libraries is, by
 definition, *an external library*. The Robot Framework open source community
 has implemented several generic libraries, such as SeleniumLibrary_ and
 SwingLibrary_, which are not packaged with the core framework. A list of
-publicly available libraries can be found from http://robotframework.org.
+publicly available libraries can be found from https://robotframework.org.
 
 Generic and custom libraries can obviously also be implemented by teams using
 Robot Framework. See `Creating test libraries`_ section for more information

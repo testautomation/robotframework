@@ -18,7 +18,7 @@ XUnit File Is Created
 
 File Structure Is Correct
     ${root} =    Get Root Node
-    Suite Stats Should Be    ${root}    8    3    1    ${SUITE.starttime}
+    Suite Stats Should Be    ${root}    8    3    1    ${SUITE.start_time}
     ${tests} =    Get XUnit Nodes    testcase
     Length Should Be    ${tests}    8
     ${fails} =    Get XUnit Nodes    testcase/failure
@@ -29,7 +29,7 @@ File Structure Is Correct
     ${skips} =    Get XUnit Nodes    testcase/skipped
     Length Should Be    ${skips}    1
     Element Attribute Should Be    ${skips}[0]    message
-    ...    Test failed but skip-on-failure mode was active and it was marked skipped.\n\nOriginal failure:\n${MESSAGES}
+    ...    Failed test skipped using 'täg' tag.\n\nOriginal failure:\n${MESSAGES}
     Element Attribute Should Be    ${skips}[0]    type    SkipExecution
     Element Should Not Exist    ${root}    testsuite/properties
 
@@ -118,9 +118,9 @@ XUnit File Testsuite Properties From Metadata
     Element Attribute Should be    ${property_elements}[0]    name     Escaping
     Element Attribute Should be    ${property_elements}[0]    value    Three backslashes \\\\\\\ & \${version}
     Element Attribute Should be    ${property_elements}[1]    name     Multiple columns
-    Element Attribute Should be    ${property_elements}[1]    value    Value in multiple columns
+    Element Attribute Should be    ${property_elements}[1]    value    Value in${SPACE*4}multiple${SPACE*4}columns
     Element Attribute Should be    ${property_elements}[2]    name     multiple lines
-    Element Attribute Should be    ${property_elements}[2]    value    Metadata in multiple lines\nis parsed using\nsame semantics as documentation.\n| table |\n| ! |
+    Element Attribute Should be    ${property_elements}[2]    value    Metadata in multiple lines\nis parsed using\nsame semantics${SPACE*4}as${SPACE*4}documentation.\n| table |\n|${SPACE*3}!${SPACE*3}|
     Element Attribute Should be    ${property_elements}[3]    name     Name
     Element Attribute Should be    ${property_elements}[3]    value    Value
     Element Attribute Should be    ${property_elements}[4]    name     Overridden
@@ -144,14 +144,13 @@ Get XUnit Nodes
     RETURN    ${nodes}
 
 Suite Stats Should Be
-    [Arguments]    ${elem}    ${tests}    ${failures}    ${skipped}    ${starttime}
+    [Arguments]    ${elem}    ${tests}    ${failures}    ${skipped}    ${start_time}
     Element Attribute Should Be       ${elem}    tests       ${tests}
     Element Attribute Should Be       ${elem}    failures    ${failures}
     Element Attribute Should Be       ${elem}    skipped     ${skipped}
     Element Attribute Should Match    ${elem}    time        ?.???
     Element Attribute Should Be       ${elem}    errors      0
-    Element Attribute Should Be       ${elem}    timestamp
-    ...    ${{datetime.datetime.strptime($starttime, '%Y%m%d %H:%M:%S.%f').strftime('%Y-%m-%dT%H:%M:%S.%f')}}
+    Element Attribute Should Be       ${elem}    timestamp   ${start_time.isoformat()}
 
 Verify Outputs
     Stderr should be empty

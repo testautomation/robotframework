@@ -13,78 +13,80 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import sys
+from io import TextIOBase
+from typing import TYPE_CHECKING
 
-from robot.model import SuiteVisitor
-from robot.utils import plural_or_not, secs_to_timestr
+from robot.utils import plural_or_not as s, secs_to_timestr
 
-from .highlighting import HighlightingStream
+from .base import BaseConsole
+from .types import ConsoleColors, ConsoleLinks
+
+if TYPE_CHECKING:
+    from robot import result, running
 
 
-class DottedOutput:
+class DottedConsole(BaseConsole):
+    """Dotted console logger.
 
-    def __init__(self, width=78, colors='AUTO', stdout=None, stderr=None):
-        self._width = width
-        self._stdout = HighlightingStream(stdout or sys.__stdout__, colors)
-        self._stderr = HighlightingStream(stderr or sys.__stderr__, colors)
-        self._markers_on_row = 0
+    Reports each test with "." (PASS), "F" (FAIL) or "s" (SKIP).
+    """
 
-    def start_suite(self, suite):
-        if not suite.parent:
-            self._stdout.write("Running suite '%s' with %d %s%s.\n"
-                               % (suite.name, suite.test_count,
-                                  'test' if not suite.rpa else 'task',
-                                  plural_or_not(suite.test_count)))
-            self._stdout.write('=' * self._width + '\n')
+    def __init__(
+        self,
+        width: int = 78,
+        colors: ConsoleColors = "AUTO",
+        links: ConsoleLinks = "AUTO",
+        stdout: "TextIOBase | None" = None,
+        stderr: "TextIOBase | None" = None,
+    ):
+        super().__init__(width, colors, links, stdout, stderr)
+        self.markers_on_row = 0
 
-    def end_test(self, test):
-        if self._markers_on_row == self._width:
-            self._stdout.write('\n')
-            self._markers_on_row = 0
-        self._markers_on_row += 1
-        if test.passed:
-            self._stdout.write('.')
-        elif test.skipped:
-            self._stdout.highlight('s', 'SKIP')
-        elif 'robot:exit' in test.tags:
-            self._stdout.write('x')
+    def start_suite(self, data: "running.TestSuite", result: "result.TestSuite"):
+        if not data.parent:
+            count = data.test_count
+            ts = ("test" if not data.rpa else "task") + s(count)
+            self.write(f"Running suite '{result.name}' with {count} {ts}.\n")
+            self.write("=" * self.width + "\n")
+
+    def end_test(self, data: "running.TestCase", result: "result.TestCase"):
+        if self.markers_on_row == self.width:
+            self.write("\n")
+            self.markers_on_row = 0
+        self.markers_on_row += 1
+        if result.passed:
+            self.write(".")
+        elif result.skipped:
+            self.highlight("SKIP", "s")
+        elif result.tags.robot("exit"):
+            self.write("x")
         else:
-            self._stdout.highlight('F', 'FAIL')
+            self.highlight("FAIL", "F")
 
-    def end_suite(self, suite):
-        if not suite.parent:
-            self._stdout.write('\n')
-            StatusReporter(self._stdout, self._width).report(suite)
-            self._stdout.write('\n')
+    def end_suite(self, data: "running.TestSuite", result: "result.TestSuite"):
+        if not data.parent:
+            self.write("\n")
+            self.report_failures(result)
+            self.report_status(result)
+            self.write("\n")
 
-    def message(self, msg):
-        if msg.level in ('WARN', 'ERROR'):
-            self._stderr.error(msg.message, msg.level)
+    def report_failures(self, suite: "result.TestSuite"):
+        """Reports failed tests."""
+        for test in suite.all_tests:
+            if test.failed and not test.tags.robot("exit"):
+                self.write(f"{'-' * self.width}\n")
+                self.highlight("FAIL")
+                self.write(f": {test.full_name}\n{test.message.strip()}\n")
 
-    def output_file(self, name, path):
-        self._stdout.write('%-8s %s\n' % (name+':', path))
-
-
-class StatusReporter(SuiteVisitor):
-
-    def __init__(self, stream, width):
-        self._stream = stream
-        self._width = width
-
-    def report(self, suite):
-        suite.visit(self)
+    def report_status(self, suite: "result.TestSuite"):
+        """Reports overall status."""
         stats = suite.statistics
-        self._stream.write("%s\nRun suite '%s' with %d %s%s in %s.\n\n"
-                           % ('=' * self._width, suite.name, stats.total,
-                              'test' if not suite.rpa else 'task',
-                              plural_or_not(stats.total),
-                              secs_to_timestr(suite.elapsedtime/1000.0)))
-        self._stream.highlight(suite.status + ('PED' if suite.status == 'SKIP' else 'ED'), suite.status)
-        self._stream.write('\n%s\n' % stats.message)
-
-    def visit_test(self, test):
-        if test.failed and 'robot:exit' not in test.tags:
-            self._stream.write('-' * self._width + '\n')
-            self._stream.highlight('FAIL')
-            self._stream.write(': %s\n%s\n' % (test.longname,
-                                               test.message.strip()))
+        ts = ("test" if not suite.rpa else "task") + s(stats.total)
+        elapsed = secs_to_timestr(suite.elapsed_time)
+        self.write(
+            f"{'=' * self.width}\n"
+            f"Run suite '{suite.name}' with {stats.total} {ts} in {elapsed}.\n\n"
+        )
+        ed = "ED" if suite.status != "SKIP" else "PED"
+        self.highlight(suite.status, suite.status + ed)
+        self.write(f"\n{stats.message}\n")

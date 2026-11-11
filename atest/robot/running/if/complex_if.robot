@@ -14,38 +14,32 @@ If inside for loop
 
 Setting after if
     ${tc} =    Check Test Case    ${TESTNAME}
-    Check Log Message    ${tc.teardown.msgs[0]}    Teardown was found and executed.
+    Check Log Message    ${tc.teardown[0]}    Teardown was found and executed.
 
 For loop inside if
     Check Test Case    ${TESTNAME}
 
-For loop inside for loop
-    Check Test Case    ${TESTNAME}
-
 Direct Boolean condition
     ${tc} =    Check Test Case    ${TESTNAME}
-    Should Be Equal    ${tc.body[0].status}                    PASS
-    Should Be Equal    ${tc.body[0].body[0].status}            PASS
-    Should Be Equal    ${tc.body[0].body[0].body[0].status}    PASS
+    Should Be Equal    ${tc[0].status}          PASS
+    Should Be Equal    ${tc[0, 0].status}       PASS
+    Should Be Equal    ${tc[0, 0, 0].status}    PASS
 
 Direct Boolean condition false
     ${tc} =    Check Test Case    ${TESTNAME}
-    Should Be Equal    ${tc.kws[0].status}                     PASS
-    Should Be Equal    ${tc.body[0].body[0].status}            NOT RUN
-    Should Be Equal    ${tc.body[0].body[0].body[0].status}    NOT RUN
+    Should Be Equal    ${tc[0].status}      PASS
+    Should Be Equal    ${tc[0, 0].status}       NOT RUN
+    Should Be Equal    ${tc[0, 0, 0].status}    NOT RUN
 
 Nesting insanity
     Check Test Case    ${TESTNAME}
 
 Recursive If
     ${tc} =    Check Test Case    ${TESTNAME}
-    Should Be Equal    ${tc.kws[0].kws[0].status}                  PASS
-    Should Be Equal    ${tc.kws[0].kws[0].kws[0].kws[0].status}    PASS
+    Should Be Equal    ${tc[0, 0].status}                  PASS
+    Should Be Equal    ${tc[0, 0, 0, 0].status}    PASS
 
 If creating variable
-    Check Test Case    ${TESTNAME}
-
-If inside if
     Check Test Case    ${TESTNAME}
 
 For loop if else early exit

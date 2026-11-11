@@ -15,165 +15,312 @@
 
 import sys
 from enum import Enum
+from typing import Any, Callable, Iterator, Mapping, NoReturn, Sequence
 
-from robot.utils import is_union, safe_str, setter, type_repr
+if sys.version_info >= (3, 11):
+    from typing import Never
+else:
+    try:
+        from typing_extensions import Never
+    except ImportError:
+        Never = NoReturn
+
+from robot.utils import NOT_SET, safe_str, setter, SetterAwareType
 
 from .argumentconverter import ArgumentConverter
 from .argumentmapper import ArgumentMapper
 from .argumentresolver import ArgumentResolver
-from .typevalidator import TypeValidator
+from .typeinfo import TypeInfo
+from .validators import DocValidator, TypeValidator
 
 
-class ArgumentSpec:
+class ArgumentSpec(metaclass=SetterAwareType):
+    __slots__ = (
+        "_name",
+        "type",
+        "positional_only",
+        "positional_or_named",
+        "var_positional",
+        "named_only",
+        "var_named",
+        "embedded",
+        "defaults",
+        "return_doc",
+        "raises",
+    )
 
-    def __init__(self, name=None, type='Keyword', positional_only=None,
-                 positional_or_named=None, var_positional=None, named_only=None,
-                 var_named=None, defaults=None, types=None):
+    def __init__(
+        self,
+        name: "str | Callable[[], str] | None" = None,
+        type: str = "Keyword",
+        positional_only: Sequence[str] = (),
+        positional_or_named: Sequence[str] = (),
+        var_positional: "str | None" = None,
+        named_only: Sequence[str] = (),
+        var_named: "str | None" = None,
+        defaults: "Mapping[str, Any] | None" = None,
+        embedded: Sequence[str] = (),
+        types: "Mapping | Sequence | None" = None,
+        return_type: "object | TypeInfo | type[NOT_SET]" = NOT_SET,
+        docs: "Mapping[str, str] | None" = None,
+        return_doc: str = "",
+        raises: "Mapping[str, str] | None" = None,
+    ):
         self.name = name
         self.type = type
-        self.positional_only = positional_only or []
-        self.positional_or_named = positional_or_named or []
+        self.positional_only = tuple(positional_only)
+        self.positional_or_named = tuple(positional_or_named)
         self.var_positional = var_positional
-        self.named_only = named_only or []
+        self.named_only = tuple(named_only)
         self.var_named = var_named
-        self.defaults = defaults or {}
+        self.embedded = tuple(embedded)
+        self.defaults = dict(defaults or {})
         self.types = types
-
-    @setter
-    def types(self, types):
-        return TypeValidator(self).validate(types)
+        self.return_type = return_type
+        # Following are only used by Libdoc.
+        self.docs = docs
+        self.return_doc = return_doc
+        self.raises = raises
 
     @property
-    def positional(self):
+    def name(self) -> "str | None":
+        return self._name if not callable(self._name) else self._name()
+
+    @name.setter
+    def name(self, name: "str | Callable[[], str] | None"):
+        self._name = name
+
+    @setter
+    def types(self, types: "Mapping | Sequence | None") -> "dict[str, TypeInfo] | None":
+        return TypeValidator(self).validate(types)
+
+    @setter
+    def return_type(self, hint: object) -> TypeInfo:
+        if isinstance(hint, TypeInfo):
+            return hint
+        if hint is Never or hint is NoReturn:
+            hint = NOT_SET
+        return TypeInfo.from_type_hint(hint, sequence_is_union=True)
+
+    @setter
+    def docs(self, docs: "Mapping[str, str] | None") -> "dict[str, str] | None":
+        return DocValidator(self).validate(docs)
+
+    @property
+    def positional(self) -> "tuple[str, ...]":
         return self.positional_only + self.positional_or_named
 
     @property
-    def minargs(self):
+    def named(self) -> "tuple[str, ...]":
+        return self.named_only + self.positional_or_named
+
+    @property
+    def minargs(self) -> int:
         return len([arg for arg in self.positional if arg not in self.defaults])
 
     @property
-    def maxargs(self):
+    def maxargs(self) -> int:
         return len(self.positional) if not self.var_positional else sys.maxsize
 
     @property
-    def argument_names(self):
-        return (self.positional_only +
-                self.positional_or_named +
-                ([self.var_positional] if self.var_positional else []) +
-                self.named_only +
-                ([self.var_named] if self.var_named else []))
+    def argument_names(self) -> "tuple[str, ...]":
+        var_positional = (self.var_positional,) if self.var_positional else ()
+        var_named = (self.var_named,) if self.var_named else ()
+        return (
+            self.positional_only
+            + self.positional_or_named
+            + var_positional
+            + self.named_only
+            + var_named
+        )
 
-    def resolve(self, arguments, variables=None, converters=None,
-                resolve_named=True, resolve_variables_until=None,
-                dict_to_kwargs=False):
-        resolver = ArgumentResolver(self, resolve_named,
-                                    resolve_variables_until, dict_to_kwargs)
-        positional, named = resolver.resolve(arguments, variables)
-        return self.convert(positional, named, converters, dry_run=not variables)
+    def resolve(
+        self,
+        args,
+        named_args=None,
+        variables=None,
+        converters=None,
+        resolve_named=True,
+        resolve_args_until=None,
+        dict_to_kwargs=False,
+        languages=None,
+    ) -> "tuple[list, list]":
+        resolver = ArgumentResolver(
+            self,
+            resolve_named,
+            resolve_args_until,
+            dict_to_kwargs,
+        )
+        positional, named = resolver.resolve(args, named_args, variables)
+        return self.convert(
+            positional,
+            named,
+            converters,
+            dry_run=not variables,
+            languages=languages,
+        )
 
-    def convert(self, positional, named, converters=None, dry_run=False):
+    def convert(
+        self,
+        positional,
+        named,
+        converters=None,
+        dry_run=False,
+        languages=None,
+    ) -> "tuple[list, list]":
         if self.types or self.defaults:
-            converter = ArgumentConverter(self, converters, dry_run)
+            converter = ArgumentConverter(self, converters, dry_run, languages)
+            # TODO: Catch exceptions and re-raise them as DataErrors with some
+            #  context information. That avoids handling all exceptions in the
+            #  call site like was done when fixing
+            #  https://github.com/robotframework/robotframework/issues/5815
             positional, named = converter.convert(positional, named)
         return positional, named
 
-    def map(self, positional, named, replace_defaults=True):
+    def map(
+        self,
+        positional,
+        named,
+        replace_defaults=True,
+    ) -> "tuple[list, list]":
         mapper = ArgumentMapper(self)
         return mapper.map(positional, named, replace_defaults)
 
-    def __iter__(self):
-        notset = ArgInfo.NOTSET
+    def copy(self) -> "ArgumentSpec":
+        types = dict(self.types) if self.types is not None else None
+        return type(self)(
+            self.name,
+            self.type,
+            self.positional_only,
+            self.positional_or_named,
+            self.var_positional,
+            self.named_only,
+            self.var_named,
+            dict(self.defaults),
+            self.embedded,
+            types,
+            self.return_type,
+            self.docs,
+            self.return_doc,
+            self.raises,
+        )
+
+    def __iter__(self) -> Iterator["ArgInfo"]:
         get_type = (self.types or {}).get
+        get_doc = (self.docs or {}).get
         get_default = self.defaults.get
         for arg in self.positional_only:
-            yield ArgInfo(ArgInfo.POSITIONAL_ONLY, arg,
-                          get_type(arg, notset), get_default(arg, notset))
+            yield ArgInfo(
+                ArgInfo.POSITIONAL_ONLY,
+                arg,
+                get_type(arg),
+                get_default(arg, NOT_SET),
+                get_doc(arg, ""),
+            )
         if self.positional_only:
             yield ArgInfo(ArgInfo.POSITIONAL_ONLY_MARKER)
         for arg in self.positional_or_named:
-            yield ArgInfo(ArgInfo.POSITIONAL_OR_NAMED, arg,
-                          get_type(arg, notset), get_default(arg, notset))
+            yield ArgInfo(
+                ArgInfo.POSITIONAL_OR_NAMED,
+                arg,
+                get_type(arg),
+                get_default(arg, NOT_SET),
+                get_doc(arg, ""),
+            )
         if self.var_positional:
-            yield ArgInfo(ArgInfo.VAR_POSITIONAL, self.var_positional,
-                          get_type(self.var_positional, notset))
+            yield ArgInfo(
+                ArgInfo.VAR_POSITIONAL,
+                self.var_positional,
+                get_type(self.var_positional),
+                doc=get_doc(self.var_positional, ""),
+            )
         elif self.named_only:
             yield ArgInfo(ArgInfo.NAMED_ONLY_MARKER)
         for arg in self.named_only:
-            yield ArgInfo(ArgInfo.NAMED_ONLY, arg,
-                          get_type(arg, notset), get_default(arg, notset))
+            yield ArgInfo(
+                ArgInfo.NAMED_ONLY,
+                arg,
+                get_type(arg),
+                get_default(arg, NOT_SET),
+                get_doc(arg, ""),
+            )
         if self.var_named:
-            yield ArgInfo(ArgInfo.VAR_NAMED, self.var_named,
-                          get_type(self.var_named, notset))
+            yield ArgInfo(
+                ArgInfo.VAR_NAMED,
+                self.var_named,
+                get_type(self.var_named),
+                doc=get_doc(self.var_named, ""),
+            )
 
     def __bool__(self):
-        return any([self.positional_only, self.positional_or_named, self.var_positional,
-                    self.named_only, self.var_named])
+        return any(self)
 
     def __str__(self):
-        return ', '.join(str(arg) for arg in self)
+        return ", ".join(str(arg) for arg in self)
 
 
 class ArgInfo:
-    NOTSET = object()
-    POSITIONAL_ONLY = 'POSITIONAL_ONLY'
-    POSITIONAL_ONLY_MARKER = 'POSITIONAL_ONLY_MARKER'
-    POSITIONAL_OR_NAMED = 'POSITIONAL_OR_NAMED'
-    VAR_POSITIONAL = 'VAR_POSITIONAL'
-    NAMED_ONLY_MARKER = 'NAMED_ONLY_MARKER'
-    NAMED_ONLY = 'NAMED_ONLY'
-    VAR_NAMED = 'VAR_NAMED'
+    """Contains argument information. Only used by Libdoc."""
 
-    def __init__(self, kind, name='', types=NOTSET, default=NOTSET):
+    POSITIONAL_ONLY = "POSITIONAL_ONLY"
+    POSITIONAL_ONLY_MARKER = "POSITIONAL_ONLY_MARKER"
+    POSITIONAL_OR_NAMED = "POSITIONAL_OR_NAMED"
+    VAR_POSITIONAL = "VAR_POSITIONAL"
+    NAMED_ONLY_MARKER = "NAMED_ONLY_MARKER"
+    NAMED_ONLY = "NAMED_ONLY"
+    VAR_NAMED = "VAR_NAMED"
+
+    def __init__(
+        self,
+        kind: str,
+        name: str = "",
+        type: "TypeInfo | None" = None,
+        default: Any = NOT_SET,
+        doc: str = "",
+    ):
         self.kind = kind
         self.name = name
-        self.types = types
+        self.type = type or TypeInfo()
         self.default = default
-
-    @setter
-    def types(self, typ):
-        if not typ or typ is self.NOTSET:
-            return tuple()
-        if isinstance(typ, tuple):
-            return typ
-        if is_union(typ):
-            return typ.__args__
-        return (typ,)
+        self.doc = doc
 
     @property
-    def required(self):
-        if self.kind in (self.POSITIONAL_ONLY,
-                         self.POSITIONAL_OR_NAMED,
-                         self.NAMED_ONLY):
-            return self.default is self.NOTSET
+    def required(self) -> bool:
+        if self.kind in (
+            self.POSITIONAL_ONLY,
+            self.POSITIONAL_OR_NAMED,
+            self.NAMED_ONLY,
+        ):
+            return self.default is NOT_SET
         return False
 
     @property
-    def types_reprs(self):
-        return [type_repr(t) for t in self.types]
-
-    @property
-    def default_repr(self):
-        if self.default is self.NOTSET:
+    def default_repr(self) -> "str | None":
+        if self.default is NOT_SET:
             return None
         if isinstance(self.default, Enum):
             return self.default.name
         return safe_str(self.default)
 
+    @property
+    def is_marker(self):
+        return self.kind in (self.POSITIONAL_ONLY_MARKER, self.NAMED_ONLY_MARKER)
+
     def __str__(self):
         if self.kind == self.POSITIONAL_ONLY_MARKER:
-            return '/'
+            return "/"
         if self.kind == self.NAMED_ONLY_MARKER:
-            return '*'
+            return "*"
         ret = self.name
         if self.kind == self.VAR_POSITIONAL:
-            ret = '*' + ret
+            ret = "*" + ret
         elif self.kind == self.VAR_NAMED:
-            ret = '**' + ret
-        if self.types:
-            ret = '%s: %s' % (ret, ' | '.join(self.types_reprs))
-            default_sep = ' = '
+            ret = "**" + ret
+        if self.type:
+            ret = f"{ret}: {self.type}"
+            default_sep = " = "
         else:
-            default_sep = '='
-        if self.default is not self.NOTSET:
-            ret = '%s%s%s' % (ret, default_sep, self.default_repr)
+            default_sep = "="
+        if self.default is not NOT_SET:
+            ret = f"{ret}{default_sep}{self.default_repr}"
         return ret

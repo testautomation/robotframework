@@ -13,70 +13,51 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from collections.abc import Iterable, Mapping
+import sys
+import warnings
 from collections import UserString
+from collections.abc import Iterable, Mapping
 from io import IOBase
-from os import PathLike
-from typing import Any, TypeVar
-try:
-    from types import UnionType
-except ImportError:    # Python < 3.10
-    UnionType = ()
-from typing import Union
-try:
-    from typing import TypedDict
-except ImportError:    # Python < 3.8
-    typeddict_types = ()
+from typing import _SpecialForm, get_args, get_origin, TypedDict, Union
+
+if sys.version_info < (3, 9):
+    try:
+        # get_args and get_origin handle at least Annotated wrong in Python 3.8.
+        from typing_extensions import get_args, get_origin
+    except ImportError:
+        pass
+if sys.version_info >= (3, 10):
+    from types import UnionType  # In Python 3.14+ this is same as typing.Union.
 else:
-    typeddict_types = (type(TypedDict('Dummy', {})),)
+    UnionType = ()
+
 try:
     from typing_extensions import TypedDict as ExtTypedDict
 except ImportError:
-    pass
-else:
-    typeddict_types += (type(ExtTypedDict('Dummy', {})),)
-
-from .platform import PY_VERSION
+    ExtTypedDict = None
 
 
-TRUE_STRINGS = {'TRUE', 'YES', 'ON', '1'}
-FALSE_STRINGS = {'FALSE', 'NO', 'OFF', '0', 'NONE', ''}
-
-
-def is_integer(item):
-    return isinstance(item, int)
-
-
-def is_number(item):
-    return isinstance(item, (int, float))
-
-
-def is_bytes(item):
-    return isinstance(item, (bytes, bytearray))
-
-
-def is_string(item):
-    return isinstance(item, str)
-
-
-def is_pathlike(item):
-    return isinstance(item, PathLike)
+TRUE_STRINGS = {"TRUE", "YES", "ON", "1"}
+FALSE_STRINGS = {"FALSE", "NO", "OFF", "0", "NONE", ""}
+typeddict_types = (type(TypedDict("Dummy", {})),)
+if ExtTypedDict:
+    typeddict_types += (type(ExtTypedDict("Dummy", {})),)
 
 
 def is_list_like(item):
-    if isinstance(item, (str, bytes, bytearray, UserString, IOBase)):
+    try:
+        if isinstance(item, (str, bytes, bytearray, UserString, IOBase)):
+            return False
+    except AttributeError:
         return False
     return isinstance(item, Iterable)
 
 
 def is_dict_like(item):
-    return isinstance(item, Mapping)
-
-
-def is_union(item, allow_tuple=False):
-    return (isinstance(item, UnionType)
-            or getattr(item, '__origin__', None) is Union
-            or (allow_tuple and isinstance(item, tuple)))
+    try:
+        return isinstance(item, Mapping)
+    except AttributeError:
+        return False
 
 
 def type_name(item, capitalize=False):
@@ -84,62 +65,78 @@ def type_name(item, capitalize=False):
 
     For example, 'integer' instead of 'int' and 'file' instead of 'TextIOWrapper'.
     """
-    if getattr(item, '__origin__', None):
-        item = item.__origin__
-    if hasattr(item, '_name') and item._name:
-        # Union, Any, etc. from typing have real name in _name and __name__ is just
-        # generic `SpecialForm`. Also, pandas.Series has _name but it's None.
-        name = item._name
-    elif is_union(item):
-        name = 'Union'
-    elif isinstance(item, IOBase):
-        name = 'file'
+    item = get_origin(item) or item
+    if isinstance(item, _SpecialForm):
+        # Prior to Python 3.10, typing special forms (Any, Union, ...) didn't
+        # have `__name__` but instead they had `_name`.
+        name = item.__name__ if hasattr(item, "__name__") else item._name
     else:
-        typ = type(item) if not isinstance(item, type) else item
-        named_types = {str: 'string', bool: 'boolean', int: 'integer',
-                       type(None): 'None', dict: 'dictionary'}
-        name = named_types.get(typ, typ.__name__.strip('_'))
-        # Generics from typing. With newer versions we get "real" type via __origin__.
-        if PY_VERSION < (3, 7):
-            if name in ('List', 'Set', 'Tuple'):
-                name = name.lower()
-            elif name == 'Dict':
-                name = 'dictionary'
+        typ = item if isinstance(item, type) else type(item)
+        if issubclass(typ, IOBase):
+            name = "file"
+        else:
+            named_types = {
+                str: "string",
+                bool: "boolean",
+                int: "integer",
+                type(None): "None",
+                dict: "dictionary",
+                UnionType: "Union",
+            }
+            name = named_types.get(typ, typ.__name__.strip("_"))
     return name.capitalize() if capitalize and name.islower() else name
 
 
-def type_repr(typ):
+def type_repr(typ, nested=True):
     """Return string representation for types.
 
     Aims to look as much as the source code as possible. For example, 'List[Any]'
     instead of 'typing.List[typing.Any]'.
     """
     if typ is type(None):
-        return 'None'
-    if typ is Any:  # Needed with Python 3.6, with newer `Any._name` exists.
-        return 'Any'
-    if is_union(typ):
-        return ' | '.join(type_repr(a) for a in typ.__args__)
+        return "None"
+    if typ is Ellipsis:
+        return "..."
+    if get_origin(typ) in (Union, UnionType):
+        return " | ".join(type_repr(a) for a in get_args(typ)) if nested else "Union"
     name = _get_type_name(typ)
-    if _has_args(typ):
-        args = ', '.join(type_repr(a) for a in typ.__args__)
-        return f'{name}[{args}]'
+    if nested:
+        # At least Literal and Annotated can have strings in args.
+        args = [repr(a) if isinstance(a, str) else type_repr(a) for a in get_args(typ)]
+        if args:
+            return f"{name}[{', '.join(args)}]"
     return name
 
 
-def _get_type_name(typ):
-    for attr in '__name__', '_name':
-        name = getattr(typ, attr, None)
-        if name:
-            return name
+def _get_type_name(typ, try_origin=True):
+    try:
+        return typ.__name__
+    except AttributeError:
+        # Prior to Python 3.10, all typing constructs (e.g. Any, Union, ...) didn't
+        # have `__name__`, but they had `_name` that we can use instead.
+        if getattr(typ, "__module__", None) in ("typing", "typing_extensions"):
+            name = getattr(typ, "_name", None)
+            if name:
+                return name
+    # Typing constructs may not name themselves, but their origin can still have it.
+    origin = get_origin(typ)
+    if origin and try_origin:
+        return _get_type_name(origin, try_origin=False)
     return str(typ)
 
 
-def _has_args(typ):
-    args = getattr(typ, '__args__', ())
-    # TypeVar check needed due to Python 3.6 having such thing in `__args__`
-    # even if using just `List`.
-    return args and not isinstance(typ.__args__[0], TypeVar)
+# TODO: Remove has_args in RF 8.
+def has_args(type):
+    """Helper to check has type valid ``__args__``.
+
+    Deprecated in Robot Framework 7.3 and will be removed in Robot Framework 8.0.
+    ``typing.get_args`` can be used instead.
+    """
+    warnings.warn(
+        "'robot.utils.has_args' is deprecated and will be removed in "
+        "Robot Framework 8.0. Use 'typing.get_args' instead."
+    )
+    return bool(get_args(type))
 
 
 def is_truthy(item):
@@ -156,7 +153,7 @@ def is_truthy(item):
     Boolean values similarly as Robot Framework itself. See also
     :func:`is_falsy`.
     """
-    if is_string(item):
+    if isinstance(item, str):
         return item.upper() not in FALSE_STRINGS
     return bool(item)
 

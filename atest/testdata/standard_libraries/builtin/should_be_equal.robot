@@ -15,6 +15,7 @@ Case-insensitive
     [Documentation]    FAIL yötä != päivää
     test value      TEST VALUE      ignore_case=True
     HYVÄÄ YÖTÄ      hyvää yötä      repr=True    ignore_case=yes
+    Straße          strasse         ignore_case=True
     ${42}           ${42}           ignore_case=True
     Yötä            Päivää          ignore_case=yep!
 
@@ -53,6 +54,20 @@ Collapse spaces
     ${42}                                ${42}                 collapse_spaces=${TRUE}
     Yo${SPACE * 5}yo                     Oy\toy                collapse_spaces=True
 
+Normalization with bytes
+    ${{b'RF'}}              ${{b'rf'}}               ignore_case=True
+    ${{b' RF'}}             ${{b'RF '}}              strip_spaces=True
+    ${{b' R\n\t F\t\n'}}    ${{b' R F '}}            collapse_spaces=True
+
+Auto conversion with bytes
+    [Documentation]    FAIL ValueError: Argument '666' (integer) cannot be converted to bytes: 666 is not in range 0-255.
+    ${{b'RF'}}              RF
+    ${{b' RF'}}             rf${SPACE}               ignore_case=True    strip_spaces=True
+    ${{b' R\n\t F\t\n'}}    ${SPACE}R F${SPACE*7}    collapse_spaces=True
+    ${{b'R F'}}             ${{[82, 32, 32, 70]}}    collapse_spaces=True
+    ${{b'R'}}               ${82}
+    ${{b'R'}}               ${666}
+
 Fails with values
     [Documentation]    FAIL Several failures occurred:
     ...
@@ -76,9 +91,14 @@ Fails without values
     ...
     ...    4) -
     1    2    3    values=FALSE
-    a    b    c    No Values
+    a    b    c    values=none
     x    y    z    values=no
     .    ,    -    ${NONE}
+
+NO VALUES is deprecated
+    [Documentation]    FAIL Message
+    xxx    xxx    values=NO VALUES
+    xxx    yyy    Message    no values
 
 Multiline comparison uses diff
     [Documentation]    FAIL
@@ -86,11 +106,11 @@ Multiline comparison uses diff
     ...    --- first
     ...    +++ second
     ...    @@ -1,3 +1,6 @@
-    ...    \ foo
-    ...    \ bar
+    ...     foo
+    ...     bar
     ...    +gar
     ...    +
-    ...    \ dar
+    ...     dar
     ...    +
     foo\nbar\ndar\n    foo\nbar\ngar\n\ndar\n\n
 
@@ -100,11 +120,11 @@ Multiline comparison with custom message
     ...    --- first
     ...    +++ second
     ...    @@ -1,3 +1,6 @@
-    ...    \ foo
-    ...    \ bar
+    ...     foo
+    ...     bar
     ...    +gar
     ...    +
-    ...    \ dar
+    ...     dar
     ...    +
     foo\nbar\ndar\n    foo\nbar\ngar\n\ndar\n\n    msg=Custom message of mine
 
@@ -153,7 +173,7 @@ formatter=repr/ascii with non-ASCII characters
     ...
     ...    6) '\\xc4' != 'A\\u0308'
     ...
-    ...    7) {'A': 2, 'a': 1, 'Ä': 4, 'ä': 3} != {'a': 1}
+    ...    7) {'a': 1, 'A': 2, 'ä': 3, 'Ä': 4} != {'a': 1}
     ...
     ...    8) ${ASCII DICT} != {'a': 1}
     Ä          A
@@ -172,22 +192,22 @@ formatter=repr with multiline
     ...    --- first
     ...    +++ second
     ...    @@ -1,3 +1,6 @@
-    ...   \ foo
-    ...   \ bar
+    ...     foo
+    ...     bar
     ...    +gar
     ...    +
-    ...   \ dar
+    ...     dar
     ...    +
     ...
     ...    2) Multiline strings are different:
     ...    --- first
     ...    +++ second
     ...    @@ -1,3 +1,6 @@
-    ...   \ 'foo\\n'
-    ...   \ 'bar\\n'
+    ...     'foo\\n'
+    ...     'bar\\n'
     ...    +'gar\\n'
     ...    +'\\n'
-    ...   \ 'dar\\n'
+    ...     'dar\\n'
     ...    +'\\n'
     foo\nbar\ndar\n    foo\nbar\ngar\n\ndar\n\n
     foo\nbar\ndar\n    foo\nbar\ngar\n\ndar\n\n   formatter=repr
@@ -226,34 +246,35 @@ formatter=repr/ascii with multiline and non-ASCII characters
     ...    --- first
     ...    +++ second
     ...    @@ -1,3 +1,3 @@
-    ...   \ Å
+    ...     Å
     ...    -Ä
     ...    +Ä
-    ...   \ Ö
+    ...     Ö
     ...
     ...    2) Multiline strings are different:
     ...    --- first
     ...    +++ second
     ...    @@ -1,3 +1,3 @@
-    ...   \ 'Å\\n'
+    ...     'Å\\n'
     ...    -'Ä\\n'
     ...    +'Ä\\n'
-    ...   \ 'Ö\\n'
+    ...     'Ö\\n'
     ...
     ...    3) Multiline strings are different:
     ...    --- first
     ...    +++ second
     ...    @@ -1,3 +1,3 @@
-    ...   \ '\\xc5\\n'
+    ...     '\\xc5\\n'
     ...    -'\\xc4\\n'
     ...    +'A\\u0308\\n'
-    ...   \ '\\xd6\\n'
+    ...     '\\xd6\\n'
     Å\nÄ\n\Ö\n    Å\nA\u0308\n\Ö\n
     Å\nÄ\n\Ö\n    Å\nA\u0308\n\Ö\n    formatter=repr
     Å\nÄ\n\Ö\n    Å\nA\u0308\n\Ö\n    formatter=ascii
 
 Invalid formatter
-    [Documentation]    FAIL ValueError: Invalid formatter 'invalid'. Available 'str', 'repr', 'ascii', 'len', and 'type'.
+    [Documentation]    FAIL
+    ...    ValueError: Argument 'formatter' got value 'invalid' that cannot be converted to 'str', 'repr' or 'ascii'.
     1    1    formatter=invalid
 
 Tuple and list with same items fail
@@ -289,13 +310,31 @@ Should Not Be Equal
     1      ${1}
     foo    foo
 
+Should Not Be Equal with custom message
+    [Documentation]    FAIL Message: foo == foo
+    [Template]    Should Not Be Equal
+    foo    bar    Not used
+    foo    foo    Message
+
+Should Not Be Equal with custom message without values
+    [Documentation]    FAIL Message
+    [Template]    Should Not Be Equal
+    foo    bar    values=False
+    foo    foo    Message     values=False
+
+Should Not Be Equal with deprecated NO VALUES
+    [Documentation]    FAIL Message
+    [Template]    Should Not Be Equal
+    foo    bar    values=no values
+    foo    foo    Message     NO VALUES
+
 Should Not Be Equal case-insensitive
-    [Documentation]     FAIL foo == foo
+    [Documentation]     FAIL fööss == fööss
     [Template]  Should Not Be Equal
     test value      TEST VALUE1     ignore_case=True
     HYVÄÄ YÖTÄ      hyvää yötä1     ignore_case=True
     ${42}           ${43}           ignore_case=True
-    foo             FOO             ignore_case=True
+    fööß            FÖÖSS           ignore_case=True
 
 Should Not Be Equal without leading spaces
     [Documentation]     FAIL Several failures occurred:
@@ -344,12 +383,12 @@ Should Not Be Equal and do not collapse spaces
     ...
     ...    1) test\tit == test\tit
     ...
-    ...    2) repr=True: hyvää\ \nyötä == hyvää\ \nyötä
+    ...    2) message: hyvää\ \nyötä == hyvää\ \nyötä
     ...
     ...    3) \ \ 42 == \ \ 42
     [Template]  Should Not Be Equal
     test\tit         test\tit         collapse_spaces=No
-    hyvää\ \nyötä    hyvää\ \nyötä    repr=True    collapse_spaces=${FALSE}
+    hyvää\ \nyötä    hyvää\ \nyötä    message    collapse_spaces=${FALSE}
     \ test\t\nit     \tvalue\tit      collapse_spaces=${NONE}
     \ \ ${42}        \ \ ${42}        collapse_spaces=False
 
@@ -358,14 +397,37 @@ Should Not Be Equal and collapse spaces
     ...
     ...    1) test it == test it
     ...
-    ...    2) repr=True: hyvää yötä == hyvää yötä
+    ...    2) message: hyvää yötä == hyvää yötä
     ...
     ...    3) \ 42 == \ 42
     [Template]  Should Not Be Equal
     test\t\nit       test\ \tit       collapse_spaces=True
-    hyvää\ \ yötä    hyvää\ \ yötä    repr=True    collapse_spaces=${TRUE}
+    hyvää\ \ yötä    hyvää\ \ yötä    message    collapse_spaces=${TRUE}
     \ test\tit       \tvalue it       collapse_spaces=Maybe yes
     \ \ ${42}        \ \ ${42}        collapse_spaces=TruE
+
+Should Not Be Equal with bytes normalization
+    [Documentation]     FAIL r f == r f
+    [Template]  Should Not Be Equal
+    ${{b'Robot'}}    ${{b'Framework'}}
+    ...    ignore_case=True    strip_spaces=True    collapse_spaces=True
+    ${{b'\n\t R\n\t F\n\t '}}    ${{b'r f'}}
+    ...    ignore_case=True    strip_spaces=True    collapse_spaces=True
+
+Should Not Be Equal with bytes auto conversion
+    [Documentation]     FAIL Several failures occurred:
+    ...
+    ...    1) fails == fails
+    ...
+    ...    2) FAIL
+    ...
+    ...    3) ValueError: Argument '666' (integer) cannot be converted to bytes: 666 is not in range 0-255.
+    [Template]  Should Not Be Equal
+    ${{b'RF'}}              RBT
+    ${{b' fails'}}          FAILS${SPACE*100}        ignore_case=True    strip_spaces=True
+    ${{b'R F'}}             ${{[82, 32, 32, 70]}}    collapse_spaces=True    msg=FAIL    values=0
+    ${{b'R'}}               ${70}
+    ${{b'R'}}               ${666}
 
 Should Not Be Equal with bytes containing non-ascii characters
     [Documentation]    FAIL ${BYTES WITH NON ASCII} == ${BYTES WITH NON ASCII}

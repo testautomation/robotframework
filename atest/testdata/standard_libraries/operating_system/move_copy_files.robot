@@ -20,7 +20,7 @@ Move One File With Move Files
 
 Move Files fails when no destination
     [Documentation]    FAIL Must contain destination and at least one source.
-    Move Files    ${source}movecopy-*.txt
+    Move Files    ${SOURCE}/movecopy-*.txt
 
 Move Files without arguments fails
     [Documentation]    FAIL Must contain destination and at least one source.
@@ -177,6 +177,15 @@ Copying From Name With Glob
 Moving From Name With Glob
     Move Files    ${SOURCE GLOB}/${GLOB FILE}    ${DEST}
     Directory Should Have Items    ${DEST}    ${GLOB FILE}
+
+Path as `pathlib.Path`
+    Move Files    ${{pathlib.Path($SOURCE)/'movecopy-*.txt'}}    ${{pathlib.Path($DEST)}}
+    Directory Should Have Items    ${DEST}    movecopy-one.txt
+    Remove Values From List    ${SOURCE FILES}    movecopy-one.txt
+    Directory Should Have Items    ${SOURCE}    @{SOURCE FILES}
+    Copy Files    ${{pathlib.Path($DEST)/'*.txt'}}    ${{pathlib.Path($DEST)/'new'}}
+    Directory Should Have Items    ${DEST}/new    movecopy-one.txt
+    Directory Should Have Items    ${DEST}    movecopy-one.txt    new
 
 *** Keywords ***
 Create Test Files For Multi-file Operations

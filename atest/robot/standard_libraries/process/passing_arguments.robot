@@ -41,30 +41,30 @@ Log process config
     ...    shell:${SPACE*3}True
     ...    stdout:${SPACE*2}%{TEMPDIR}${/}stdout
     ...    stderr:${SPACE*2}PIPE
-    ...    stdin:${SPACE*3}PIPE
+    ...    stdin:${SPACE*3}None
     ...    alias:${SPACE*3}äliäs
     ...    env:${SPACE*5}None
-    Check Log Message    ${tc.kws[0].msgs[1]}    Process configuration:\n${config}    level=DEBUG
+    Check Log Message    ${tc[0, 1]}    Process configuration:\n${config}    level=DEBUG
     ${cwd} =    Normalize Path    ${DATADIR}/standard_libraries/process
     ${config} =    Catenate    SEPARATOR=\n
     ...    cwd:${SPACE*5}${cwd}
     ...    shell:${SPACE*3}False
     ...    stdout:${SPACE*2}PIPE
     ...    stderr:${SPACE*2}STDOUT
-    ...    stdin:${SPACE*3}None
+    ...    stdin:${SPACE*3}PIPE
     ...    alias:${SPACE*3}None
     ...    env:${SPACE*5}None
-    Check Log Message    ${tc.kws[1].msgs[1]}    Process configuration:\n${config}    level=DEBUG
+    Check Log Message    ${tc[1, 1]}    Process configuration:\n${config}    level=DEBUG
 
 *** Keywords ***
 Python script should be run and arguments logged
     [Arguments]    ${arguments}    ${script}=script.py    ${index}=0
     ${script} =    Normalize Path    ${DATADIR}/standard_libraries/process/files/${script}
     ${tc} =    Arguments should be logged    python ${script} ${arguments}    ${index}
-    [Return]    ${tc}
+    RETURN    ${tc}
 
 Arguments should be logged
     [Arguments]    ${message}    ${index}=0
     ${tc} =    Check Test Case    ${TESTNAME}
-    Check Log Message    ${tc.kws[${index}].msgs[0]}    Starting process:\n${message}
-    [Return]    ${tc}
+    Check Log Message    ${tc[${index}, 0]}    Starting process:\n${message}
+    RETURN    ${tc}

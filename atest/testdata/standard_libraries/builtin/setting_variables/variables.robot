@@ -1,20 +1,21 @@
-*** Setting ***
+*** Settings ***
 Documentation     See also variables2.robot
 Suite Setup       My Suite Setup
 Suite Teardown    My Suite Teardown
 Library           OperatingSystem
 Library           Collections
 
-*** Variable ***
+*** Variables ***
 ${SCALAR}         Hi tellus
 @{LIST}           Hello    world
 &{DICT}           key=value    foo=bar
+${SUITE}          default
 ${PARENT SUITE SETUP CHILD SUITE VAR 1}    This is overridden by __init__
 ${SCALAR LIST ERROR}
 ...               Setting list value to scalar variable '\${SCALAR}' is not
 ...               supported anymore. Create list variable '\@{SCALAR}' instead.
 
-*** Test Case ***
+*** Test Cases ***
 Set Variable
     ${var} =    Set Variable    Hello
     Should Be Equal    ${var}    Hello
@@ -205,6 +206,23 @@ Set Task Variable as alias for Set Test Variable
     Set Task Variable    ${TEST VAR}    Set again in test level
     Test Variable Should Be Set To      Set again in test level
 
+Test variables set on suite level is not seen in tests
+    Variable Should Not Exist    $parent_suite_setup_test_var
+    Variable Should Not Exist    $suite_setup_test_var
+    Variable Should Not Exist    $suite_setup_test_var_to_be_overridden_by_suite_var
+    Variable Should Not Exist    $suite_setup_test_var_to_be_overridden_by_global_var
+    Set Suite Variable    \${SUITE setup TEST var to be overridden by SUITE var}     Overridded by suite variable!
+    Set Suite Variable    \${SUITE setup TEST var_to_be overridden by GLOBAL var}    Overridded by global variable!
+    Should Be Equal    ${suite_setup_test_var_to_be_overridden_by_suite_var}         Overridded by suite variable!
+    Should Be Equal    ${suite_setup_test_var_to_be_overridden_by_global_var}        Overridded by global variable!
+
+Test variable set on suite level does not hide existing suite variable
+    Should Be Equal    ${SUITE}    default
+
+Test variable set on suite level can be overridden as suite variable
+    Should Be Equal    ${suite_setup_test_var_to_be_overridden_by_suite_var}         Overridded by suite variable!
+    Should Be Equal    ${suite_setup_test_var_to_be_overridden_by_global_var}        Overridded by global variable!
+
 Set Suite Variable 1
     [Documentation]    FAIL Variable '\${non_existing}' not found.
     Variable Should Not Exist    $parent_suite_setup_suite_var
@@ -240,18 +258,21 @@ Set Suite Variable 2
     Set Suite Variable    invalid
 
 Set Child Suite Variable 1
+    Check Child Suite Variables    var3=Only seen in this suite
     Should Be Equal    ${PARENT SUITE SETUP CHILD SUITE VAR 1}    Set in __init__
     Should Be True    ${PARENT SUITE SETUP CHILD SUITE VAR 2} == ['Set in', '__init__']
     Should Be Equal    ${PARENT SUITE SETUP CHILD SUITE VAR 3}    Only seen in this suite
     Set Global Variable    ${PARENT SUITE SETUP CHILD SUITE VAR 2}    Overridden by global
     Should Be Equal    ${PARENT SUITE SETUP CHILD SUITE VAR 2}    Overridden by global
     Set Suite Variable    ${PARENT SUITE SETUP CHILD SUITE VAR 3}    Only seen, and overridden, in this suite    children=${TRUE}
+    Check Child Suite Variables    var2=Overridden by global    var3=Only seen, and overridden, in this suite
 
 Set Child Suite Variable 2
-    [Documentation]    FAIL Variable '${NON EXISTING}' not found.
+    [Documentation]    FAIL Variable '\${NON EXISTING}' not found.
     Should Be Equal    ${PARENT SUITE SETUP CHILD SUITE VAR 1}    Set in __init__
     Should Be Equal    ${PARENT SUITE SETUP CHILD SUITE VAR 2}    Overridden by global
     Should Be Equal    ${PARENT SUITE SETUP CHILD SUITE VAR 3}    Only seen, and overridden, in this suite
+    Check Child Suite Variables    var2=Overridden by global    var3=Only seen, and overridden, in this suite
     Set Suite Variable    ${VAR}    value    children=${NON EXISTING}
 
 Set Global Variable 1
@@ -539,9 +560,14 @@ Setting scalar global variable with list value is not possible 2
     [Documentation]    FAIL ${SCALAR LIST ERROR}
     Set Global Variable    ${SCALAR}    @{EMPTY}
 
-*** Keyword ***
+*** Keywords ***
 My Suite Setup
     ${suite_setup_local_var} =    Set Variable    Variable available only locally    in suite setup
+    Set Test Variable    $suite_setup_test_var    New in RF 7.2!
+    Set Test Variable    $suite_setup_test_var_to_be_overridden_by_suite_var    Will be overridden
+    Set Test Variable    $suite_setup_test_var_to_be_overridden_by_global_var    Will be overridden
+    Should Be Equal      ${SUITE}    default
+    Set Test Variable    ${SUITE}    suite level test variable
     Set Suite Variable    $suite_setup_suite_var    Suite var set in suite setup
     @{suite_setup_suite_var_list} =    Create List    Suite var set in    suite setup
     Set Suite Variable    @suite_setup_suite_var_list
@@ -553,17 +579,24 @@ My Suite Setup
     Should Be True    ${suite_setup_suite_var_list} == [ 'Suite var set in', 'suite setup' ]
     Should Be Equal    ${suite_setup_global_var}    Global var set in suite setup
     Should Be True    ${suite_setup_global_var_list} == [ 'Global var set in', 'suite setup' ]
+    Variable Should Not Exist    $parent_suite_setup_test_var
     Variable Should Not Exist    $parent_suite_setup_suite_var
     Variable Should Not Exist    $parent_suite_setup_suite_var_2
     Should Be Equal    ${parent_suite_setup_global_var}    Set in __init__
+    Check Child Suite Variables
     Should Be Equal    ${PARENT SUITE SETUP CHILD SUITE VAR 1}    Set in __init__
     Should Be True    ${PARENT SUITE SETUP CHILD SUITE VAR 2} == ['Set in', '__init__']
     Should Be True    ${PARENT SUITE SETUP CHILD SUITE VAR 3} == {'Set': 'in __init__'}
     Set Suite Variable    ${PARENT SUITE SETUP CHILD SUITE VAR 3}    Only seen in this suite    children=true
     Set Global Variable    ${VARIABLE TABLE IN VARIABLES 2 (2)}    Set by suite setup in "variables.robot"
+    Check Child Suite Variables    var3=Only seen in this suite
 
 My Suite Teardown
     Set Suite Variable    $suite_teardown_suite_var    Suite var set in suite teardown
+    Should Be Equal    ${suite_setup_test_var}    New in RF 7.2!
+    Should Be Equal    ${suite_setup_test_var_to_be_overridden_by_suite_var}     Overridded by suite variable!
+    Should Be Equal    ${suite_setup_test_var_to_be_overridden_by_global_var}    Overridded by global variable!
+    Should Be Equal    ${SUITE}    suite level test variable
     Should Be Equal    ${suite_setup_suite_var}    Suite var set in suite setup
     Should Be Equal    ${test_level_suite_var}    Suite var set in test
     Should Be Equal    ${uk_level_suite_var}    Suite var set in user keyword
@@ -580,6 +613,7 @@ My Suite Teardown
     Should Be Equal    ${PARENT SUITE SETUP CHILD SUITE VAR 1}    Set in __init__
     Should Be Equal    ${PARENT SUITE SETUP CHILD SUITE VAR 2}    Overridden by global
     Should Be Equal    ${PARENT SUITE SETUP CHILD SUITE VAR 3}    Only seen, and overridden, in this suite
+    Check Child Suite Variables    var2=Overridden by global    var3=Only seen, and overridden, in this suite
 
 Test Variable Should Be Set To
     [Arguments]    ${expected}
@@ -709,3 +743,12 @@ Setting Local Variable
 
 Local Variable Should Not Exist
     Variable Should Not Exist    ${new}
+
+Check Child Suite Variables
+    [Arguments]
+    ...    ${var1}=Set in __init__
+    ...     ${var2}=${{['Set in', '__init__']}}
+    ...     ${var3}=${{{'Set': 'in __init__'}}}
+    Should Be Equal    ${PARENT SUITE SETUP CHILD SUITE VAR 1}   ${var1}
+    Should Be Equal    ${PARENT SUITE SETUP CHILD SUITE VAR 2}   ${var2}
+    Should Be Equal    ${PARENT SUITE SETUP CHILD SUITE VAR 3}   ${var3}

@@ -5,20 +5,22 @@ Resource                 conversion.resource
 *** Variables ***
 @{LIST}                  foo                       bar
 &{DICT}                  foo=${1}                  bar=${2}
+${PATH}                  ${{pathlib.Path('x/y')}}
+${PUREPATH}              ${{pathlib.PurePath('x/y')}}
 
 *** Test Cases ***
 Integer
-    Integer              42                        ${42}
-    Integer              -1                        ${-1}
-    Integer              9999999999999999999999    ${9999999999999999999999}
+    Integer              42                        42
+    Integer              -1                        -1
+    Integer              9999999999999999999999    9999999999999999999999
     Integer              123 456 789               123456789
     Integer              123_456_789               123456789
     Integer              - 123 456 789             -123456789
     Integer              -_123_456_789             -123456789
 
 Integer as float
-    Integer              1.0                       ${1.0}
-    Integer              1.5                       ${1.5}
+    Integer              1.0                       1
+    Integer              1.5                       1.5
 
 Integer as hex
     Integer              0x0                        0
@@ -64,11 +66,11 @@ Invalid integer
     Integer              0x0x0
 
 Float
-    Float                1.5                       ${1.5}
-    Float                -1                        ${-1.0}
-    Float                1e6                       ${1000000.0}
+    Float                1.5                       1.5
+    Float                -1                        -1.0
+    Float                1e6                       1000000.0
     Float                1 000 000 . 0_0_1         1000000.001
-    Float                -1.2e-3                   ${-0.0012}
+    Float                -1.2e-3                   -0.0012
 
 Invalid float
     [Template]           Invalid value is passed as-is
@@ -85,19 +87,19 @@ Invalid decimal
     Decimal              foobar
 
 Boolean
-    Boolean              True                      ${True}
-    Boolean              YES                       ${True}
-    Boolean              on                        ${True}
-    Boolean              1                         ${True}
-    Boolean              false                     ${False}
-    Boolean              No                        ${False}
-    Boolean              oFF                       ${False}
-    Boolean              0                         ${False}
-    Boolean              ${EMPTY}                  ${False}
-    Boolean              none                      ${None}
-    Boolean              ${None}                   ${None}
-    Boolean              ${0}                      ${0}
-    Boolean              ${1.1}                    ${1.1}
+    Boolean              True                      True
+    Boolean              YES                       True
+    Boolean              on                        True
+    Boolean              1                         True
+    Boolean              false                     False
+    Boolean              No                        False
+    Boolean              oFF                       False
+    Boolean              0                         False
+    Boolean              ${EMPTY}                  False
+    Boolean              none                      None
+    Boolean              ${None}                   None
+    Boolean              ${0}                      0
+    Boolean              ${1.1}                    1.1
 
 Invalid boolean
     [Template]           Invalid value is passed as-is
@@ -105,11 +107,11 @@ Invalid boolean
     Boolean              ${LIST}                   expected=${LIST}
 
 String
-    String               Hello, world!             u'Hello, world!'
-    String               åäö                       u'åäö'
-    String               None                      u'None'
-    String               True                      u'True'
-    String               []                        u'[]'
+    String               Hello, world!             'Hello, world!'
+    String               åäö                       'åäö'
+    String               None                      'None'
+    String               True                      'True'
+    String               []                        '[]'
     String               ${42}                     42
     String               ${None}                   None
     String               ${LIST}                   ['foo', 'bar']
@@ -174,6 +176,22 @@ Invalid timedelta
     Timedelta            foobar
     Timedelta            01:02:03:04
 
+Path
+    Path                 path                      Path('path')
+    Path                 two/components            Path(r'two${/}components')
+    Path                 two${/}components         Path(r'two${/}components')
+    Path                 ${PATH}                   Path('x/y')
+    Path                 ${PUREPATH}               Path('x/y')
+    PurePath             path                      Path('path')
+    PurePath             two/components            Path(r'two${/}components')
+    PurePath             two${/}components         Path(r'two${/}components')
+    PurePath             ${PATH}                   Path('x/y')
+    PurePath             ${PUREPATH}               PurePath('x/y')
+
+Invalid Path
+    [Template]           Invalid value is passed as-is
+    Path                 ${1}                      ${1}
+
 Enum
     Enum                 FOO                       MyEnum.FOO
     Enum                 bar                       MyEnum.bar
@@ -201,6 +219,7 @@ Invalid enum
 None
     None                 None                      None
     None                 NONE                      None
+    None                 ${EMPTY}                  ''
     None                 Hello, world!             'Hello, world!'
     None                 True                      'True'
     None                 []                        '[]'
@@ -209,12 +228,12 @@ List
     List                 []                        []
     List                 ['foo', 'bar']            ${LIST}
     List                 [1, 2, 3.14, -42]         [1, 2, 3.14, -42]
-    List                 ['\\x00', '\\x52']        ['\\x00', 'R']
+    List                 ('\\x00', '\\x52')        ['\\x00', 'R']
+    List                 ${LIST}                   ${LIST}
 
 Invalid list
     [Template]           Invalid value is passed as-is
     List                 [1, ooops]
-    List                 ()
     List                 {}
     List                 ooops
     List                 ${EMPTY}
@@ -223,20 +242,21 @@ Invalid list
 
 Tuple
     Tuple                ()                        ()
-    Tuple                ('foo', "bar")            tuple(${LIST})
-    Tuple                (1, 2, 3.14, -42)         (1, 2, 3.14, -42)
+    Tuple                ('foo', 'bar')            ('foo', 'bar')
+    Tuple                [1, 2, 3.14, -42]         (1, 2, 3.14, -42)
+    Tuple                ${LIST}                   ('foo', 'bar')
 
 Invalid tuple
     [Template]           Invalid value is passed as-is
     Tuple                (1, ooops)
-    Tuple                []
     Tuple                {}
     Tuple                ooops
 
 Dictionary
     Dictionary           {}                        {}
-    Dictionary           {'foo': 1, "bar": 2}      dict(${DICT})
+    Dictionary           {'foo': 1, 'bar': 2}      {'foo': 1, 'bar': 2}
     Dictionary           {1: 2, 3.14: -42}         {1: 2, 3.14: -42}
+    Dictionary           ${DICT}                   ${DICT}
 
 Invalid dictionary
     [Template]           Invalid value is passed as-is
@@ -250,13 +270,13 @@ Set
     Set                  set()                     set()
     Set                  {'foo', 'bar'}            {'foo', 'bar'}
     Set                  {1, 2, 3.14, -42}         {1, 2, 3.14, -42}
+    Set                  [1, 2, 3.14, -42]         {1, 2, 3.14, -42}
+    Set                  (1, 2, 3.14, -42)         {1, 2, 3.14, -42}
 
 Invalid set
     [Template]           Invalid value is passed as-is
     Set                  {1, ooops}
     Set                  {}
-    Set                  ()
-    Set                  []
     Set                  ooops
     Set                  {{'not', 'hashable'}}
     Set                  frozenset()
@@ -286,11 +306,6 @@ Positional as named
     Integer              argument=-1               expected=-1
     Float                argument=1e2              expected=100.0
     Dictionary           argument={'a': 1}         expected={'a': 1}
-
-Invalid positional as named
-    Integer              argument=1.0              expected=1.0
-    Float                argument=xxx              expected='xxx'
-    Dictionary           argument=[0]              expected='[0]'
 
 Kwonly
     Kwonly               argument=1.0              expected=1.0

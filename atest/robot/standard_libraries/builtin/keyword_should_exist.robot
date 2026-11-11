@@ -3,7 +3,6 @@ Suite Setup     Run Tests  ${EMPTY}  standard_libraries/builtin/keyword_should_e
 Resource        atest_resource.robot
 
 *** Test Cases ***
-
 Library keyword exists with short name
     Check Test Case  ${TESTNAME}
 
@@ -31,6 +30,9 @@ Keyword does not exist
 Keyword does not exist with custom message
     Check Test Case  ${TESTNAME}
 
+Recommendations not shown if keyword does not exist
+    Check Test Case  ${TESTNAME}
+
 Duplicate keywords
     Check Test Case  ${TESTNAME}
 
@@ -45,4 +47,3 @@ Empty keyword name
 
 Non-string keyword name
     Check Test Case  ${TESTNAME}
-

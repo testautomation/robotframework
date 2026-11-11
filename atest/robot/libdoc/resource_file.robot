@@ -19,7 +19,7 @@ Documentation
     ...
     ...    | *TABLE* |
     ...    | \${NONEX} | $\{CURDIR} | \${TEMPDIR} |
-    ...    | foo | bar |
+    ...    | foo${SPACE*6}|${SPACE*4}bar${SPACE*4}|
     ...    tabs \t\t\t here
 
 Version
@@ -32,7 +32,7 @@ Generated
     Generated Should Be Defined
 
 Scope
-    Scope Should Be                 GLOBAL    old=${EMPTY}
+    Scope Should Be                 GLOBAL
 
 Source Info
     Source Should Be                ${TESTDATADIR}/resource.robot
@@ -42,8 +42,9 @@ Spec version
     Spec version should be correct
 
 Resource Tags
-    Specfile Tags Should Be          \${3}    ?!?!??    a      b    bar    dar
-    ...                              foo      Has       kw4    tags
+    Specfile Tags Should Be          \${3}    ?!?!??    a      b    bar    common
+    ...                              dar    foo      Has       kw4    robot:private
+    ...                              tag-in-private     tags
 
 Resource Has No Inits
     Should Have No Init
@@ -59,11 +60,16 @@ Keyword Arguments
 
 Different Argument Types
     Keyword Arguments Should Be     2    mandatory    optional=default    *varargs
-    ...                                  kwo=default    another    **kwargs
+    ...                                  kwo: int = default    another    **kwargs
 
 Embedded Arguments
     Keyword Name Should Be          3    Embedded \${arguments}
     Keyword Arguments Should Be     3
+    Keyword Name Should Be         12    With embedded \${arg: int} and normal arg
+    Keyword Arguments Should Be    12    normal
+
+Argument Types
+    Keyword Arguments Should Be     9    a: int    b: Literal['R', 'F']    c: int | None = None
 
 Keyword Documentation
     Keyword Doc Should Be           0    $\{CURDIR}
@@ -85,11 +91,14 @@ Keyword Documentation
     ...    -------------
     ...
     ...    | = first = | = second = |
-    ...    | foo | bar |
+    ...    | foo${SPACE*7}|${SPACE*4}bar${SPACE*5}|
+    ...
+    ...    Tags not only on the last line is new in RF 7.5.
     Keyword Doc Should Be           9
     ...    Summary line
     ...
-    ...    Another line.
+    ...    Second doc paragraph. Not having an empty row
+    ...    before tags is deprecated since RF 7.5.
 
 Deprecation
     Keyword Doc Should Be           1    *DEPRECATED* for some reason.
@@ -99,10 +108,14 @@ Deprecation
     END
 
 Keyword tags
-    Keyword Tags Should Be          6
+    Keyword Tags Should Be          6    common
     Keyword Tags Should Be          7    ?!?!??    Has    kw4    tags
     Keyword Tags Should Be          8    \${3}   a    b
-    Keyword Tags Should Be          9    bar    dar    foo
+    Keyword Tags Should Be          9    bar    common    dar    foo
+
+Not having empty row before `Tags:` in documentation is deprecated
+    Should Start With    ${OUTPUT}
+    ...    [ WARN ] Invalid documentation in 'kw 6': Not having an empty row before 'Tags:' is deprecated.
 
 Non ASCII
     Keyword Doc Should Be           10    Hyvää yötä.\n\nСпасибо!
@@ -110,14 +123,37 @@ Non ASCII
 Keyword Source Info
     Keyword Name Should Be            0    curdir
     Keyword Should Not Have Source    0
-    Keyword Lineno Should Be          0    65
+    Keyword Lineno Should Be          0    82
+
+Type Docs
+    Type Doc Standard Should Be     0    integer     Conversion is done using Python's [[]https://docs.python.org/library/functions.html#int|int]
+    Usages Should Be                0    Standard    integer    Different argument types    kw 6
+    Type Doc Standard Should Be     1    Literal     Only specified values are accepted.
+    Usages Should Be                1    Standard    Literal    kw 6
+    Type Doc Standard Should Be     2    None        String ``NONE`` (case-insensitive) and
+    Usages Should Be                2    Standard    None    kw 6
+
+Standard type doc format depends on library doc format
+    Run Libdoc And Parse Output    --doc-format markdown ${TESTDATADIR}/resource.robot
+    Type Doc Standard Should Be     0    integer     Conversion is done using Python's [[]int]
+    Usages Should Be                0    Standard    integer    Different argument types    kw 6
+    Type Doc Standard Should Be     1    Literal     Only specified values are accepted.
+    Usages Should Be                1    Standard    Literal    kw 6
+    Type Doc Standard Should Be     2    None        String `NONE` (case-insensitive) and
+    Usages Should Be                2    Standard    None    kw 6
 
 '*.resource' extension is accepted
     Run Libdoc And Parse Output       ${TESTDATADIR}/resource.resource
     Source Should Be                  ${TESTDATADIR}/resource.resource
     Lineno Should Be                  1
-    Keyword Name Should Be            0    Yay, I got new extension!
-    Keyword Arguments Should Be       0    Awesome!!
-    Keyword Doc Should Be             0    Yeah!!!
-    Keyword Should Not Have Source    0
-    Keyword Lineno Should Be          0    2
+    Keyword Name Should Be            2    Yay, I got new extension!
+    Keyword Arguments Should Be       2    arg: int
+    Keyword Doc Should Be             2    Yeah!!!
+    Keyword Should Not Have Source    2
+    Keyword Lineno Should Be          2    5
+    Type Doc Standard Should Be       0    integer    Conversion is done using Python's [[]https://docs.python.org/library/functions.html#int|int]
+
+Keyword Tags setting
+    Keyword Tags Should Be            0    keyword    own    tags
+    Keyword Tags Should Be            1    in doc    keyword    own    tags
+    Keyword Tags Should Be            2    keyword    tags

@@ -13,93 +13,146 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from collections.abc import MutableMapping
 import re
+from collections.abc import Iterable, Iterator, Mapping, Sequence
+from typing import MutableMapping, TypeVar
 
-from .robottypes import is_dict_like, is_string
+from .robottypes import type_name
+
+V = TypeVar("V")
+Self = TypeVar("Self", bound="NormalizedDict")
 
 
-def normalize(string, ignore=(), caseless=True, spaceless=True):
-    """Normalizes given string according to given spec.
+def normalize(
+    string: str,
+    ignore: "Sequence[str]" = (),
+    caseless: bool = True,
+    spaceless: bool = True,
+) -> str:
+    """Normalize the ``string`` according to the given spec.
 
-    By default string is turned to lower case and all whitespace is removed.
-    Additional characters can be removed by giving them in ``ignore`` list.
+    By default, string is turned to lower case (actually case-folded) and all
+    whitespace is removed. Additional characters can be removed by giving them
+    in ``ignore`` list.
     """
-    empty = '' if is_string(string) else b''
-    if isinstance(ignore, bytes):
-        # Iterating bytes in Python3 yields integers.
-        ignore = [bytes([i]) for i in ignore]
     if spaceless:
-        string = empty.join(string.split())
+        string = "".join(string.split())
     if caseless:
-        string = string.lower()
-        ignore = [i.lower() for i in ignore]
+        string = string.casefold()
+        ignore = [i.casefold() for i in ignore]
     # both if statements below enhance performance a little
     if ignore:
         for ign in ignore:
             if ign in string:
-                string = string.replace(ign, empty)
+                string = string.replace(ign, "")
     return string
 
 
 def normalize_whitespace(string):
-    return re.sub(r'\s', ' ', string, flags=re.UNICODE)
+    return re.sub(r"\s", " ", string, flags=re.UNICODE)
 
 
-class NormalizedDict(MutableMapping):
+class NormalizedDict(MutableMapping[str, V]):
     """Custom dictionary implementation automatically normalizing keys."""
 
-    def __init__(self, initial=None, ignore=(), caseless=True, spaceless=True):
+    def __init__(
+        self,
+        initial: "Mapping[str, V] | Iterable[tuple[str, V]] | None" = None,
+        ignore: "Sequence[str]" = (),
+        caseless: bool = True,
+        spaceless: bool = True,
+    ):
         """Initialized with possible initial value and normalizing spec.
 
         Initial values can be either a dictionary or an iterable of name/value
-        pairs. In the latter case items are added in the given order.
+        pairs.
 
         Normalizing spec has exact same semantics as with the :func:`normalize`
         function.
         """
-        self._data = {}
-        self._keys = {}
+        self._data: dict[str, V] = {}
+        self._keys: dict[str, str] = {}
         self._normalize = lambda s: normalize(s, ignore, caseless, spaceless)
         if initial:
-            self._add_initial(initial)
+            self.update(initial)
 
-    def _add_initial(self, initial):
-        items = initial.items() if hasattr(initial, 'items') else initial
-        for key, value in items:
-            self[key] = value
+    @classmethod
+    def fromkeys(
+        cls,
+        keys: "Iterable[str]",
+        value: "V | None" = None,
+        /,
+        *,
+        ignore: "Sequence[str]" = (),
+        caseless: bool = True,
+        spaceless: bool = True,
+    ) -> "NormalizedDict[V | None]":
+        """Convenience method to create a NormalizedDict from keys.
 
-    def __getitem__(self, key):
+        This matches ``dict.fromkeys`` but is not part of the Mapping API.
+
+        New in Robot Framework 7.4.1.
+        """
+        return cls(
+            dict.fromkeys(keys, value),
+            ignore=ignore,
+            caseless=caseless,
+            spaceless=spaceless,
+        )
+
+    @property
+    def normalized_keys(self) -> "tuple[str, ...]":
+        return tuple(self._keys)
+
+    def __getitem__(self, key: str) -> V:
+        if not isinstance(key, str):
+            raise KeyError(key)
         return self._data[self._normalize(key)]
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: V):
+        if not isinstance(key, str):
+            raise TypeError(
+                f"{type_name(self)} only accepts strings as keys, "
+                f"got {type_name(key)}."
+            )
         norm_key = self._normalize(key)
         self._data[norm_key] = value
         self._keys.setdefault(norm_key, key)
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: str):
+        if not isinstance(key, str):
+            raise KeyError(key)
         norm_key = self._normalize(key)
         del self._data[norm_key]
         del self._keys[norm_key]
 
-    def __iter__(self):
+    def __iter__(self) -> "Iterator[str]":
         return (self._keys[norm_key] for norm_key in sorted(self._keys))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._data)
 
-    def __str__(self):
-        return '{%s}' % ', '.join('%r: %r' % (key, self[key]) for key in self)
+    def __str__(self) -> str:
+        items = ", ".join(f"{key!r}: {self[key]!r}" for key in self)
+        return f"{{{items}}}"
 
-    def __eq__(self, other):
-        if not is_dict_like(other):
+    def __repr__(self) -> str:
+        name = type(self).__name__
+        params = str(self) if self else ""
+        return f"{name}({params})"
+
+    def __eq__(self, other: object) -> bool:
+        try:
+            if not isinstance(other, Mapping):
+                return False
+        except AttributeError:
             return False
         if not isinstance(other, NormalizedDict):
             other = NormalizedDict(other)
         return self._data == other._data
 
-    def copy(self):
-        copy = NormalizedDict()
+    def copy(self: Self) -> Self:
+        copy = type(self)()
         copy._data = self._data.copy()
         copy._keys = self._keys.copy()
         copy._normalize = self._normalize
@@ -107,8 +160,8 @@ class NormalizedDict(MutableMapping):
 
     # Speed-ups. Following methods are faster than default implementations.
 
-    def __contains__(self, key):
-        return self._normalize(key) in self._data
+    def __contains__(self, key: str) -> bool:
+        return isinstance(key, str) and self._normalize(key) in self._data
 
     def clear(self):
         self._data.clear()

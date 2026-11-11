@@ -13,7 +13,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from robot.utils import test_or_task
+from collections.abc import Iterator
+
+from robot.utils import plural_or_not, test_or_task
 
 from .stats import TotalStat
 from .visitor import SuiteVisitor
@@ -22,55 +24,48 @@ from .visitor import SuiteVisitor
 class TotalStatistics:
     """Container for total statistics."""
 
-    def __init__(self, rpa=False):
+    def __init__(self, rpa: bool = False):
         #: Instance of :class:`~robot.model.stats.TotalStat` for all the tests.
-        self._stat = TotalStat(test_or_task('All {Test}s', rpa))
+        self.stat = TotalStat(test_or_task("All {Test}s", rpa))
         self._rpa = rpa
 
     def visit(self, visitor):
-        visitor.visit_total_statistics(self._stat)
+        visitor.visit_total_statistics(self.stat)
 
-    def __iter__(self):
-        yield self._stat
-
-    @property
-    def total(self):
-        return self._stat.total
+    def __iter__(self) -> "Iterator[TotalStat]":
+        yield self.stat
 
     @property
-    def passed(self):
-        return self._stat.passed
+    def total(self) -> int:
+        return self.stat.total
 
     @property
-    def skipped(self):
-        return self._stat.skipped
+    def passed(self) -> int:
+        return self.stat.passed
 
     @property
-    def failed(self):
-        return self._stat.failed
+    def skipped(self) -> int:
+        return self.stat.skipped
+
+    @property
+    def failed(self) -> int:
+        return self.stat.failed
 
     def add_test(self, test):
-        self._stat.add_test(test)
+        self.stat.add_test(test)
 
     @property
-    def message(self):
+    def message(self) -> str:
         """String representation of the statistics.
 
         For example::
             2 tests, 1 passed, 1 failed
         """
-        # TODO: should this message be highlighted in console
-        test_or_task = 'test' if not self._rpa else 'task'
-        total, end, passed, failed, skipped = self._get_counts()
-        template = '%d %s%s, %d passed, %d failed'
-        if skipped:
-            return ((template + ', %d skipped')
-                    % (total, test_or_task, end, passed, failed, skipped))
-        return template % (total, test_or_task, end, passed, failed)
-
-    def _get_counts(self):
-        ending = 's' if self.total != 1 else ''
-        return self.total, ending, self.passed, self.failed, self.skipped
+        kind = test_or_task("test", self._rpa) + plural_or_not(self.total)
+        msg = f"{self.total} {kind}, {self.passed} passed, {self.failed} failed"
+        if self.skipped:
+            msg += f", {self.skipped} skipped"
+        return msg
 
 
 class TotalStatisticsBuilder(SuiteVisitor):

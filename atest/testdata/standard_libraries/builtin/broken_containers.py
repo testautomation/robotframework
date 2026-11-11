@@ -1,16 +1,12 @@
-try:
-    from collections.abc import Sequence, Mapping
-except ImportError:
-    from collections import Sequence, Mapping
+from collections.abc import Mapping, Sequence
 
-
-__all__ = ['BROKEN_ITERABLE', 'BROKEN_SEQUENCE', 'BROKEN_MAPPING']
+__all__ = ["BROKEN_ITERABLE", "BROKEN_MAPPING", "BROKEN_SEQUENCE"]
 
 
 class BrokenIterable:
 
     def __iter__(self):
-        yield 'x'
+        yield "x"
         raise ValueError(type(self).__name__)
 
     def __getitem__(self, item):
@@ -26,7 +22,6 @@ class BrokenSequence(BrokenIterable, Sequence):
 
 class BrokenMapping(BrokenIterable, Mapping):
     pass
-
 
 
 BROKEN_ITERABLE = BrokenIterable()

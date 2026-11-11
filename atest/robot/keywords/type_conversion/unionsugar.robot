@@ -16,6 +16,12 @@ Union with None and str
 Union with ABC
     Check Test Case    ${TESTNAME}
 
+Union with Any
+    Check Test Case    ${TESTNAME}
+
+Union with object
+    Check Test Case    ${TESTNAME}
+
 Union with subscripted generics
     Check Test Case    ${TESTNAME}
 
@@ -31,7 +37,10 @@ Union with item not liking isinstance
 Argument not matching union
     Check Test Case    ${TESTNAME}
 
-Union with custom type
+Union with unrecognized type
+    Check Test Case    ${TESTNAME}
+
+Union with only unrecognized types
     Check Test Case    ${TESTNAME}
 
 Avoid unnecessary conversion

@@ -13,10 +13,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from operator import add, sub
 import re
+from typing import Any, Literal
 
-from .robottypes import is_integer
 from .unic import safe_str
 
 
@@ -39,27 +38,26 @@ def printable_name(string, code_style=False):
     'miXed_CAPS_nAMe'  -> 'MiXed CAPS NAMe'
     ''                 -> ''
     """
-    if code_style and '_' in string:
-        string = string.replace('_', ' ')
+    if code_style and "_" in string:
+        string = string.replace("_", " ")
     parts = string.split()
-    if code_style and len(parts) == 1 \
-            and not (string.isalpha() and string.islower()):
+    if code_style and len(parts) == 1 and not (string.isalpha() and string.islower()):
         parts = _split_camel_case(parts[0])
-    return ' '.join(part[0].upper() + part[1:] for part in parts)
+    return " ".join(part[0].upper() + part[1:] for part in parts)
 
 
 def _split_camel_case(string):
     tokens = []
     token = []
-    for prev, char, next in zip(' ' + string, string, string[1:] + ' '):
+    for prev, char, next in zip(" " + string, string, string[1:] + " "):
         if _is_camel_case_boundary(prev, char, next):
             if token:
-                tokens.append(''.join(token))
+                tokens.append("".join(token))
             token = [char]
         else:
             token.append(char)
     if token:
-        tokens.append(''.join(token))
+        tokens.append("".join(token))
     return tokens
 
 
@@ -72,15 +70,15 @@ def _is_camel_case_boundary(prev, char, next):
 
 
 def plural_or_not(item):
-    count = item if is_integer(item) else len(item)
-    return '' if count in (1, -1) else 's'
+    count = item if isinstance(item, int) else len(item)
+    return "" if count in (1, -1) else "s"
 
 
-def seq2str(sequence, quote="'", sep=', ', lastsep=' and '):
+def seq2str(sequence, quote="'", sep=", ", lastsep=" and "):
     """Returns sequence in format `'item 1', 'item 2' and 'item 3'`."""
-    sequence = [f'{quote}{safe_str(item)}{quote}' for item in sequence]
+    sequence = [f"{quote}{safe_str(item)}{quote}" for item in sequence]
     if not sequence:
-        return ''
+        return ""
     if len(sequence) == 1:
         return sequence[0]
     last_two = lastsep.join(sequence[-2:])
@@ -90,28 +88,97 @@ def seq2str(sequence, quote="'", sep=', ', lastsep=' and '):
 def seq2str2(sequence):
     """Returns sequence in format `[ item 1 | item 2 | ... ]`."""
     if not sequence:
-        return '[ ]'
-    return '[ %s ]' % ' | '.join(safe_str(item) for item in sequence)
+        return "[ ]"
+    items = " | ".join(safe_str(item) for item in sequence)
+    return f"[ {items} ]"
 
 
-def test_or_task(text, rpa=False):
-    """Replaces `{test}` in `text` with `test` or `task` depending on `rpa`."""
-    def replace(match):
-        test = match.group(1)
+def test_or_task(text: str, rpa: bool):
+    """Replace 'test' with 'task' in the given `text` depending on `rpa`.
+
+    If given text is `test`, `test` or `task` is returned directly. Otherwise,
+    pattern `{test}` is searched from the text and occurrences replaced with
+    `test` or `task`.
+
+    In both cases matching the word `test` is case-insensitive and the returned
+    `test` or `task` has exactly same case as the original.
+    """
+
+    def replace(test):
         if not rpa:
             return test
         upper = [c.isupper() for c in test]
-        return ''.join(c.upper() if up else c for c, up in zip('task', upper))
-    return re.sub('{(test)}', replace, text, flags=re.IGNORECASE)
+        return "".join(c.upper() if up else c for c, up in zip("task", upper))
+
+    if text.upper() == "TEST":
+        return replace(text)
+    return re.sub("{(test)}", lambda m: replace(m.group(1)), text, flags=re.IGNORECASE)
 
 
 def isatty(stream):
-    # first check if buffer was detached
-    if hasattr(stream, 'buffer') and stream.buffer is None:
-        return False
-    if not hasattr(stream, 'isatty'):
+    if not hasattr(stream, "isatty"):
         return False
     try:
         return stream.isatty()
-    except ValueError:    # Occurs if file is closed.
+    except ValueError:  # Occurs if stream is closed or its buffer is detached.
         return False
+
+
+def parse_re_flags(flags: "str | None" = None) -> int:
+    result = 0
+    if not flags:
+        return result
+    for flag in flags.split("|"):
+        try:
+            re_flag = getattr(re, flag.upper().strip())
+        except AttributeError:
+            raise ValueError(f"Unknown regexp flag: {flag}")
+        else:
+            if isinstance(re_flag, re.RegexFlag):
+                result |= re_flag
+            else:
+                raise ValueError(f"Unknown regexp flag: {flag}")
+    return result
+
+
+def validate_literal(value: Any, literal: "type[Literal]", kind: str = "value") -> Any:
+    upper = value.upper() if isinstance(value, str) else None
+    available = literal.__args__
+    matches = []
+    for item in available:
+        if item == value:
+            if type(item) is type(value):
+                return item
+            matches.append(item)
+        elif isinstance(item, str) and item.upper() == upper:
+            matches.append(item)
+    if len(matches) == 1:
+        return matches[0]
+    raise ValueError(f"Invalid {kind} '{value}'. Available: {seq2str(available)}.")
+
+
+class classproperty(property):
+    """Property that works with classes in addition to instances.
+
+    Only supports getters. Setters and deleters cannot work with classes due
+    to how the descriptor protocol works, and they are thus explicitly disabled.
+    Metaclasses must be used if they are needed.
+    """
+
+    def __init__(self, fget, fset=None, fdel=None, doc=None):
+        if fset:
+            self.setter(fset)
+        if fdel:
+            self.deleter(fset)
+        super().__init__(fget)
+        if doc:
+            self.__doc__ = doc
+
+    def __get__(self, instance, owner):
+        return self.fget(owner)
+
+    def setter(self, fset):
+        raise TypeError("Setters are not supported.")
+
+    def deleter(self, fset):
+        raise TypeError("Deleters are not supported.")

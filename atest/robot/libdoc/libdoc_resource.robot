@@ -1,7 +1,6 @@
 *** Settings ***
 Resource          atest_resource.robot
 Library           LibDocLib.py    ${INTERPRETER}
-Library           OperatingSystem
 
 *** Variables ***
 ${TESTDATADIR}    ${DATADIR}/libdoc
@@ -10,6 +9,7 @@ ${OUTBASE}        %{TEMPDIR}${/}${LIBNAME}
 ${OUTXML}         ${OUTBASE}.xml
 ${OUTHTML}        ${OUTBASE}.html
 ${OUTJSON}        ${OUTBASE}.json
+${OUTMARKDOWN}    ${OUTBASE}.md
 ${NEWDIR_XML}     %{TEMPDIR}${/}tempdir${/}${LIBNAME}.xml
 ${NEWDIR_HTML}    %{TEMPDIR}${/}tempdir${/}${LIBNAME}.html
 
@@ -31,8 +31,8 @@ Run Libdoc And Parse Output
 
 Run Libdoc And Verify Output
     [Arguments]    ${args}    @{expected}
+    VAR    ${expected}    @{expected}    separator=\n
     ${output}=    Run Libdoc    ${args}
-    ${expected}=    Catenate    SEPARATOR=\n    @{expected}
     Should Match    ${output}   ${expected}\n
 
 Run Libdoc And Parse Model From HTML
@@ -44,7 +44,7 @@ Run Libdoc And Parse Model From HTML
 Run Libdoc And Parse Model From JSON
     [Arguments]    ${args}
     Run Libdoc    ${args} ${OUTJSON}
-    Validate JSON spec    ${OUTJSON}
+    Validate JSON Spec    ${OUTJSON}
     ${model_string}=    Get File    ${OUTJSON}
     ${MODEL} =    Evaluate    json.loads($model_string)
     Set Suite Variable    ${MODEL}
@@ -58,14 +58,14 @@ Format Should Be
     Element Attribute Should Be    ${LIBDOC}    format    ${format}
 
 Doc Should Start With
-    [Arguments]    @{doc}
-    ${doc}=    Catenate     SEPARATOR=\n    @{doc}
-    Element Text Should Match    ${LIBDOC}    ${doc}*    doc
+    [Arguments]    @{expected}
+    VAR    ${expected}    @{expected}    separator=\n
+    Element Text Should Match    ${LIBDOC}    ${expected}*    doc
 
 Doc Should Be
-    [Arguments]    @{doc}
-    ${doc}=    Catenate     SEPARATOR=\n    @{doc}
-    Element Text Should Be    ${LIBDOC}    ${doc}    doc
+    [Arguments]    @{expected}
+    VAR    ${expected}    @{expected}    separator=\n
+    Element Text Should Be    ${LIBDOC}    ${expected}    doc
 
 Version Should Match
     [Arguments]    ${version}
@@ -80,7 +80,7 @@ Type Should Be
     Element Attribute Should Be    ${LIBDOC}    type    ${type}
 
 Scope Should Be
-    [Arguments]    ${scope}    ${old}=${{ {'GLOBAL': 'global', 'SUITE': 'test suite', 'TEST': 'test case'}[$scope] }}
+    [Arguments]    ${scope}
     Element Attribute Should Be    ${LIBDOC}    scope    ${scope}
 
 Source Should Be
@@ -93,27 +93,35 @@ Lineno Should Be
     Element Attribute Should Be    ${LIBDOC}    lineno    ${lineno}
 
 Generated Should Be Defined
-    Element Attribute Should Match    ${LIBDOC}    generated    ????-??-??T??:??:??Z
+    # For example, '1970-01-01T00:00:01+00:00'.
+    Element Attribute Should Match    ${LIBDOC}    generated    ????-??-??T??:??:?????:??
+
+Generated Should Be
+    [Arguments]    ${generated}
+    Generated Should Be Defined
+    Element Attribute Should Be    ${LIBDOC}    generated    ${generated}
 
 Spec version should be correct
-    Element Attribute Should Be    ${LIBDOC}    specversion    4
+    Element Attribute Should Be    ${LIBDOC}    specversion    7
 
 Should Have No Init
     ${inits} =    Get Elements    ${LIBDOC}    xpath=inits/init
     Should Be Empty    ${inits}
 
+# TODO: Remove "Init ..." keywords and make "Keyword ..." keywords generic
+# similarly as "Argument Doc Should Be".
 Init Doc Should Start With
-    [Arguments]    ${index}    @{doc}
+    [Arguments]    ${index}    @{expected}
+    VAR    ${expected}    @{expected}    separator=\n
     ${inits}=   Get Elements    ${LIBDOC}   xpath=inits/init
-    ${doc}=    Catenate     SEPARATOR=    @{doc}
     ${text} =    Get Element Text    ${inits}[${index}]    xpath=doc
-    Should Start With    ${text}    ${doc}
+    Should Start With    ${text}    ${expected}
 
 Init Doc Should Be
-    [Arguments]    ${index}    @{doc}
+    [Arguments]    ${index}    @{expected}
+    VAR    ${expected}    @{expected}    separator=\n
     ${kws}=   Get Elements    ${LIBDOC}    xpath=inits/init
-    ${doc}=    Catenate     SEPARATOR=    @{doc}
-    Element Text Should Be    ${kws}[${index}]    ${doc}    xpath=doc
+    Element Text Should Be    ${kws}[${index}]    ${expected}    xpath=doc
 
 Init Arguments Should Be
     [Arguments]    ${index}   @{expected}
@@ -121,34 +129,115 @@ Init Arguments Should Be
 
 Keyword Name Should Be
     [Arguments]    ${index}   ${name}
-    ${elements}=   Get Elements    ${LIBDOC}    xpath=keywords/kw
-    Element Attribute Should Be    ${elements}[${index}]    name    ${name}
+    ${kws}=   Get Elements    ${LIBDOC}    xpath=keywords/kw
+    Element Attribute Should Be    ${kws}[${index}]    name    ${name}
 
 Keyword Arguments Should Be
     [Arguments]    ${index}    @{expected}
     Verify Arguments Structure    ${index}    keywords/kw    ${expected}
 
+Argument Doc Should Be
+    [Arguments]    ${kw_index}   ${arg_index}    ${name}    @{expected}
+    VAR    ${expected}    @{expected}    separator=\n
+    IF    $kw_index == "init"
+        VAR    ${kw_index}    0
+        ${kws}=   Get Elements    ${LIBDOC}    xpath=inits/init
+    ELSE
+        ${kws}=   Get Elements    ${LIBDOC}    xpath=keywords/kw
+    END
+    ${args}=    Get Elements    ${kws}[${kw_index}]    xpath=arguments/arg
+    VAR    ${arg}    ${args}[${arg_index}]
+    IF    $name
+        Element Text Should Be    ${arg}    ${name}    xpath=name
+    ELSE
+        Element Should Not Exist    ${arg}    xpath=name
+    END
+    IF    $expected
+        Element Text Should Be    ${arg}    ${expected}    xpath=doc
+    ELSE
+        Element Should Not Exist    ${arg}    xpath=doc
+    END
+
 Verify Arguments Structure
     [Arguments]    ${index}   ${xpath}    ${expected}
     ${kws}=    Get Elements    ${LIBDOC}    xpath=${xpath}
     ${arg_elems}=    Get Elements    ${kws}[${index}]    xpath=arguments/arg
-    FOR    ${arg_elem}    ${exp_repr}    IN ZIP     ${arg_elems}    ${expected}
+    FOR    ${arg_elem}    ${exp_repr}    IN ZIP     ${arg_elems}    ${expected}    mode=STRICT
         ${kind}=        Get Element Attribute        ${arg_elem}    kind
         ${required}=    Get Element Attribute        ${arg_elem}    required
         ${repr}=        Get Element Attribute        ${arg_elem}    repr
         ${name}=        Get Element Optional Text    ${arg_elem}    name
-        ${type}=        Get Elements Texts           ${arg_elem}    type
+        ${types}=       Get Elements                 ${arg_elem}    type
         ${default}=     Get Element Optional Text    ${arg_elem}    default
+        IF    not $types
+            VAR         ${type}                      ${None}
+            VAR         ${alias}                     ${None}
+        ELSE IF    len($types) == 1
+            ${type}=    Get Type                     ${types}[0]
+            ${alias}=   Get Element Attribute        ${types}[0]    alias
+        ELSE
+            Fail        Cannot have more than one <type> element
+        END
         ${arg_model}=    Create Dictionary
         ...    kind=${kind}
         ...    name=${name}
         ...    type=${type}
         ...    default=${default}
+        ...    alias=${alias}
         ...    repr=${repr}
         Verify Argument Model    ${arg_model}    ${exp_repr}
         Should Be Equal    ${repr}    ${exp_repr}
     END
-    Should Be Equal    ${{len($arg_elems)}}    ${{len($expected)}}
+
+Raises Should Be
+    [Arguments]    ${index}    &{expected}
+    ${kws}=   Get Elements    ${LIBDOC}    xpath=keywords/kw
+    ${types}=    Get Elements    ${kws}[${index}]    xpath=raises/type
+    FOR    ${elem}    ${name}    IN ZIP    ${types}    ${expected}    mode=strict
+        Element Attribute Should Be    ${elem}    name    ${name}
+        Element Text Should Be    ${elem}    ${expected}[${name}]
+    END
+
+Return Doc Should Be
+    [Arguments]    ${index}    @{expected}
+    VAR    ${expected}    @{expected}    separator=\n
+    ${kws}=   Get Elements    ${LIBDOC}    xpath=keywords/kw
+    Element Text Should Be    ${kws}[${index}]    ${expected}    xpath=returndoc
+
+Return Type Should Be
+    [Arguments]    ${index}    ${name}    @{nested}    ${alias}=${None}
+    ${kws}=    Get Elements    ${LIBDOC}    xpath=keywords/kw
+    VAR    ${kw}    ${kws}[${index}]
+    IF    $name == 'NOT SET'
+        Element Should Not Exist    ${kw}    returntype
+        RETURN
+    END
+    Element Attribute Should Be    ${kw}    name     ${name}     xpath=returntype
+    Element Attribute Should Be    ${kw}    alias    ${alias}    xpath=returntype
+    ${type_elems} =    Get Elements    ${kw}    returntype/type
+    FOR    ${elem}    ${expected}    IN ZIP    ${type_elems}    ${nested}    mode=STRICT
+        Element Attribute Should Be    ${elem}    name    ${expected}
+    END
+
+Get Type
+    [Arguments]    ${elem}
+    ${children} =    Get Elements    ${elem}    type
+    ${nested} =    Create List
+    FOR    ${child}    IN    @{children}
+        ${type} =    Get Type    ${child}
+        Append To List    ${nested}    ${type}
+    END
+    ${type} =    Get Element Attribute    ${elem}    name
+    ${alias} =    Get Element Attribute    ${elem}    alias
+    IF    $alias
+        VAR    ${type}    ${alias}
+    ELSE IF    $elem.get('union') == 'true'
+        VAR    ${type}    @{nested}    separator=${SPACE}|${SPACE}
+    ELSE IF    $nested
+        VAR    ${args}    @{nested}    separator=,${SPACE}
+        VAR    ${type}    ${type}\[${args}]
+    END
+    RETURN    ${type}
 
 Get Element Optional Text
     [Arguments]    ${source}    ${xpath}
@@ -167,23 +256,23 @@ Verify Argument Model
     Should Be Equal As Strings    ${arg_model}[repr]    ${expected_repr}
 
 Keyword Doc Should Start With
-    [Arguments]    ${index}    @{doc}
+    [Arguments]    ${index}    @{expected}
+    VAR    ${expected}    @{expected}    separator=\n
     ${kws}=   Get Elements    ${LIBDOC}   xpath=keywords/kw
-    ${doc}=    Catenate     SEPARATOR=\n    @{doc}
     ${text}=    Get Element Text    ${kws}[${index}]    xpath=doc
-    Should Start With    ${text}    ${doc}
+    Should Start With    ${text}    ${expected}
 
 Keyword Doc Should Be
-    [Arguments]    ${index}    @{doc}
+    [Arguments]    ${index}    @{expected}
+    VAR    ${expected}    @{expected}    separator=\n
     ${kws}=   Get Elements    ${LIBDOC}    xpath=keywords/kw
-    ${doc}=    Catenate     SEPARATOR=\n    @{doc}
-    Element Text Should Be    ${kws}[${index}]    ${doc}    xpath=doc
+    Element Text Should Be    ${kws}[${index}]    ${expected}    xpath=doc
 
 Keyword Shortdoc Should Be
-    [Arguments]    ${index}    @{doc}
+    [Arguments]    ${index}    @{expected}
+    VAR    ${expected}    @{expected}    separator=\n
     ${kws}=   Get Elements    ${LIBDOC}    xpath=keywords/kw
-    ${doc}=    Catenate     SEPARATOR=\n    @{doc}
-    Element Text Should Be    ${kws}[${index}]    ${doc}    xpath=shortdoc
+    Element Text Should Be    ${kws}[${index}]    ${expected}    xpath=shortdoc
 
 Keyword Tags Should Be
     [Arguments]    ${index}    @{expected}
@@ -193,7 +282,7 @@ Keyword Tags Should Be
 
 Specfile Tags Should Be
     [Arguments]    @{expected}
-    ${tags}    Get Elements Texts    ${LIBDOC}    xpath=tags/tag
+    ${tags}=    Get Elements Texts    ${LIBDOC}    xpath=tags/tag
     Should Be Equal    ${tags}    ${expected}
 
 Keyword Source Should Be
@@ -217,6 +306,16 @@ Keyword Should Not Have Lineno
     ${kws}=    Get Elements    ${LIBDOC}    xpath=${xpath}
     Element Should Not Have Attribute    ${kws}[${index}]    lineno
 
+Keyword Should Be Private
+    [Arguments]    ${index}
+    ${kws}=    Get Elements    ${LIBDOC}    xpath=keywords/kw
+    Element Attribute Should be    ${kws}[${index}]    private    true
+
+Keyword Should Not Be Private
+    [Arguments]    ${index}
+    ${kws}=    Get Elements    ${LIBDOC}    xpath=keywords/kw
+    Element Should Not Have Attribute    ${kws}[${index}]    private
+
 Keyword Should Be Deprecated
     [Arguments]    ${index}
     ${kws}=    Get Elements    ${LIBDOC}    xpath=keywords/kw
@@ -237,7 +336,7 @@ Remove Output Files
 
 Should Be Equal Multiline
     [Arguments]    ${actual}    @{expected}    ${start}=False
-    ${expected} =    Catenate    SEPARATOR=\n    @{expected}
+    VAR    ${expected}    @{expected}    separator=\n
     IF    not ${start}
         Should Be Equal As Strings    ${actual}    ${expected}
     ELSE
@@ -250,54 +349,50 @@ List of Dict Should Be Equal
         Dictionaries Should Be Equal    ${dict1}    ${dict2}
     END
 
-DataType Enum Should Be
+Type Doc Enum Should Be
     [Arguments]    ${index}    ${name}    ${doc}    @{exp_members}
-    FOR    ${xpath}    IN    datatypes/enums/enum    typedocs/type[@type='Enum']
-        ${enums}=   Get Elements    ${LIBDOC}   xpath=${xpath}
-        Element Attribute Should Be    ${enums}[${index}]     name   ${name}
-        Element Text Should Be    ${enums}[${index}]     ${doc}    xpath=doc
-        ${members}=    Get Elements    ${enums}[${index}]    xpath=members/member
-        FOR   ${member}    ${exp_member}    IN ZIP    ${members}    ${exp_members}
-            ${attrs}=    Get Element Attributes    ${member}
-            Element Attribute Should Be    ${member}    name     ${{${exp_member}}}[name]
-            Element Attribute Should Be    ${member}    value    ${{${exp_member}}}[value]
-        END
+    ${enums}=   Get Elements    ${LIBDOC}   xpath=typedocs/type[@type='Enum']
+    Element Attribute Should Be    ${enums}[${index}]     name   ${name}
+    Element Text Should Be    ${enums}[${index}]     ${doc}    xpath=doc
+    ${members}=    Get Elements    ${enums}[${index}]    xpath=members/member
+    FOR   ${member}    ${exp_member}    IN ZIP    ${members}    ${exp_members}
+        ${attrs}=    Get Element Attributes    ${member}
+        Element Attribute Should Be    ${member}    name     ${{${exp_member}}}[name]
+        Element Attribute Should Be    ${member}    value    ${{${exp_member}}}[value]
     END
 
-DataType TypedDict Should Be
+Type Doc TypedDict Should Be
     [Arguments]    ${index}    ${name}    ${doc}    @{exp_items}
-    FOR    ${xpath}    IN    datatypes/typeddicts/typeddict    typedocs/type[@type='TypedDict']
-        ${dicts}=   Get Elements    ${LIBDOC}   xpath=${xpath}
-        Element Attribute Should Be    ${dicts}[${index}]     name   ${name}
-        Element Text Should Be    ${dicts}[${index}]     ${doc}    xpath=doc
-        ${items}=    Get Elements    ${dicts}[${index}]    xpath=items/item
-        FOR   ${exp_item}    IN    @{exp_items}
-            ${exp}=    Evaluate    json.loads($exp_item)
-            FOR    ${item}    IN    @{items}
-                ${cur}=    Get Element Attributes    ${item}
-                IF    $cur['key'] == $exp['key']
-                    Should Be Equal    ${cur}[key]     ${exp}[key]
-                    Should Be Equal    ${cur}[type]    ${exp}[type]
-                    IF    'required' in $exp
-                        Should Be Equal    ${cur}[required]    ${exp}[required]
-                    END
-                    BREAK
+    ${dicts}=   Get Elements    ${LIBDOC}   xpath=typedocs/type[@type='TypedDict']
+    Element Attribute Should Be    ${dicts}[${index}]     name   ${name}
+    Element Text Should Be    ${dicts}[${index}]     ${doc}    xpath=doc
+    ${items}=    Get Elements    ${dicts}[${index}]    xpath=items/item
+    FOR   ${exp_item}    IN    @{exp_items}
+        ${exp}=    Evaluate    json.loads($exp_item)
+        FOR    ${item}    IN    @{items}
+            ${cur}=    Get Element Attributes    ${item}
+            IF    $cur['key'] == $exp['key']
+                Should Be Equal    ${cur}[key]     ${exp}[key]
+                Should Be Equal    ${cur}[type]    ${exp}[type]
+                IF    'required' in $exp
+                    Should Be Equal    ${cur}[required]    ${exp}[required]
                 END
+                BREAK
             END
         END
     END
 
-DataType Custom Should Be
+Type Doc Custom Should Be
     [Arguments]    ${index}    ${name}    ${doc}
-    ${customs}=   Get Elements    ${LIBDOC}   xpath=typedocs/type[@type='Custom']
-    Element Attribute Should Be    ${customs}[${index}]     name      ${name}
-    Element Text Should Be         ${customs}[${index}]     ${doc}    xpath=doc
+    ${types}=   Get Elements    ${LIBDOC}   xpath=typedocs/type[@type='Custom']
+    Element Attribute Should Be    ${types}[${index}]     name      ${name}
+    Element Text Should Be         ${types}[${index}]     ${doc}    xpath=doc
 
-DataType Standard Should Be
+Type Doc Standard Should Be
     [Arguments]    ${index}    ${name}    ${doc}
-    ${customs}=   Get Elements    ${LIBDOC}   xpath=typedocs/type[@type='Standard']
-    Element Attribute Should Be    ${customs}[${index}]     name       ${name}
-    Element Text Should Match      ${customs}[${index}]     ${doc}*    xpath=doc
+    ${types}=   Get Elements    ${LIBDOC}   xpath=typedocs/type[@type='Standard']
+    Element Attribute Should Be    ${types}[${index}]     name       ${name}
+    Element Text Should Match      ${types}[${index}]     ${doc}*    xpath=doc
 
 Usages Should Be
     [Arguments]    ${index}    ${type}    ${name}    @{expected}
@@ -322,15 +417,21 @@ Accepted Types Should Be
     END
 
 Typedoc links should be
-    [Arguments]    ${kw}    ${arg}    @{typedocs}
-    ${types} =    Get Elements    ${LIBDOC}    keywords/kw[${${kw} + 1}]/arguments/arg[${${arg} + 1}]/type
-    Length Should Be    ${types}    ${{len($typedocs)}}
-    FOR    ${type}    ${typedoc}    IN ZIP    ${types}    ${typedocs}
-        IF    ':' in $typedoc
-            ${typename}    ${typedoc} =    Split String    ${typedoc}    :
-        ELSE
-            ${typename} =    Set Variable    ${typedoc}
-        END
-        Element Text Should Be    ${type}    ${typename}
-        Element Attribute Should Be    ${type}    typedoc    ${{$typedoc or None}}
+    [Arguments]    ${kw}    ${arg}    ${typedoc}    @{nested typedocs}
+    ${type} =    Get Element    ${LIBDOC}    keywords/kw[${${kw} + 1}]/arguments/arg[${${arg} + 1}]/type
+    Typedoc link should be    ${type}    ${typedoc}
+    ${nested} =    Get Elements    ${type}    type
+    Length Should Be    ${nested}    ${{len($nested_typedocs)}}
+    FOR    ${type}    ${typedoc}    IN ZIP    ${nested}    ${nested typedocs}
+        Typedoc link should be    ${type}    ${typedoc}
     END
+
+Typedoc link should be
+    [Arguments]    ${type}    ${typedoc}
+    IF    ':' in $typedoc
+        ${typename}    ${typedoc} =    Split String    ${typedoc}    :
+    ELSE
+        ${typename} =    Set Variable    ${typedoc}
+    END
+    Element Attribute Should Be    ${type}    name       ${typename}
+    Element Attribute Should Be    ${type}    typedoc    ${{$typedoc or None}}

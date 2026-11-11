@@ -6,16 +6,16 @@ Resource          libdoc_resource.robot
 Invalid arg spec
     Keyword Name Should Be    0    Invalid arg spec
     Keyword Doc Should Be     0    *Creating keyword failed:* Invalid argument specification: Only last argument can be kwargs.
-    Stdout should contain error    Invalid arg spec    2
+    Stdout should contain error    Invalid arg spec    3
     ...    Invalid argument specification: Only last argument can be kwargs.
 
-Dublicate name
-    Keyword Name Should Be    3    Same twice
+Duplicate name
+    Keyword Name Should Be    3    Same Twice
     Keyword Doc Should Be     3    *Creating keyword failed:* Keyword with same name defined multiple times.
-    Stdout should contain error    Same twice    8
+    Stdout should contain error    Same twice    10
     ...    Keyword with same name defined multiple times
 
-Dublicate name with embedded arguments
+Duplicate name with embedded arguments
     Keyword Name Should Be    1    same \${embedded match}
     Keyword Doc Should Be     1    ${EMPTY}
     Keyword Name Should Be    2    Same \${embedded}

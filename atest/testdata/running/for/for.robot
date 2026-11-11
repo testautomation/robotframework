@@ -6,8 +6,8 @@ Variables         binary_list.py
 @{NUMS}           1    2    3    4    5
 @{RESULT}
 ${WRONG VALUES}   Number of FOR loop values should be multiple of its variables.
-${INVALID FOR}    'For' is a reserved keyword. It must be an upper case 'FOR' when used as a marker.
-${INVALID END}    'End' is a reserved keyword. It must be an upper case 'END' when used as a marker to close a block.
+${INVALID FOR}    Support for the old FOR loop syntax has been removed. Replace 'For' with 'FOR', end the loop with 'END', and remove escaping backslashes.
+${INVALID END}    END is not allowed in this context.
 
 *** Test Cases ***
 Simple loop
@@ -22,7 +22,7 @@ Variables in values
         Log    ${num}
         Log    Hello from for loop
         No Operation
-        Run Keyword If    ${num} in [2,6]    Log    Presidential Candidate!    WARN
+        Run Keyword If    ${num} in [2, 6]    Log    Presidential Candidate!    WARN
     END    # I can haz comments??!?
 
 Indentation is not required
@@ -132,10 +132,10 @@ Failure inside FOR 1
     Fail    Not executed
 
 Failure inside FOR 2
-    [Documentation]    FAIL    Failure with 4
+    [Documentation]    FAIL    Failure with <4>
     FOR    ${num}    IN    @{NUMS}
         Log    Before Check
-        Should Not Be Equal    ${num}    4    Failure with ${num}    no values
+        Should Not Be Equal    ${num}    4    Failure with <${num}>    values=False
         Log    After Check
     END
     Fail    Not executed
@@ -284,7 +284,7 @@ Old :FOR syntax is not supported
 
 Escaping with backslash is not supported
     [Documentation]    FAIL
-    ...    No keyword with name '\\' found.  If it is used inside a for loop, remove escaping backslashes and end the loop with 'END'.
+    ...    No keyword with name '\\' found. If it is used inside a for loop, remove escaping backslashes and end the loop with 'END'.
     FOR    ${var}    IN    one    two
     \    Fail    Should not be executed
     END
@@ -297,7 +297,8 @@ FOR is case and space sensitive 1
     END
 
 FOR is case and space sensitive 2
-    [Documentation]    FAIL    ${INVALID FOR}
+    [Documentation]    FAIL    No keyword with name 'F O R' found. Did you mean:\n${SPACE}${SPACE}${SPACE}${SPACE}For In UK
+
     F O R    ${var}    IN    one    two
         Fail    Should not be executed
     END
@@ -329,56 +330,56 @@ Invalid END
     END    ooops
 
 No loop values
-    [Documentation]    FAIL    FOR loop has no loop values.
+    [Documentation]    FAIL    FOR loop has no values.
     FOR    ${var}    IN
         Fail    Not Executed
     END
     Fail    Not Executed
 
 No loop variables
-    [Documentation]    FAIL    FOR loop has no loop variables.
+    [Documentation]    FAIL    FOR loop has no variables.
     FOR    IN    one    two
         Fail    Not Executed
     END
     Fail    Not Executed
 
 Invalid loop variable 1
-    [Documentation]    FAIL    FOR loop has invalid loop variable 'ooops'.
+    [Documentation]    FAIL    Invalid FOR loop variable 'ooops'.
     FOR    ooops    IN    a    b    c
         Fail    Not Executed
     END
     Fail    Not Executed
 
 Invalid loop variable 2
-    [Documentation]    FAIL    FOR loop has invalid loop variable 'ooops'.
+    [Documentation]    FAIL    Invalid FOR loop variable 'ooops'.
     FOR    ${var}    ooops    IN    a    b    c
         Fail    Not Executed
     END
     Fail    Not Executed
 
 Invalid loop variable 3
-    [Documentation]    FAIL    FOR loop has invalid loop variable '\@{ooops}'.
+    [Documentation]    FAIL    Invalid FOR loop variable '\@{ooops}'.
     FOR    @{ooops}    IN    a    b    c
         Fail    Not Executed
     END
     Fail    Not Executed
 
 Invalid loop variable 4
-    [Documentation]    FAIL    FOR loop has invalid loop variable '\&{ooops}'.
+    [Documentation]    FAIL    Invalid FOR loop variable '\&{ooops}'.
     FOR    &{ooops}    IN    a    b    c
         Fail    Not Executed
     END
     Fail    Not Executed
 
 Invalid loop variable 5
-    [Documentation]    FAIL    FOR loop has invalid loop variable '$var'.
+    [Documentation]    FAIL    Invalid FOR loop variable '$var'.
     FOR    $var    IN    one    two
         Fail    Not Executed
     END
     Fail    Not Executed
 
 Invalid loop variable 6
-    [Documentation]    FAIL    FOR loop has invalid loop variable '\${not closed'.
+    [Documentation]    FAIL    Invalid FOR loop variable '\${not closed'.
     FOR    ${not closed    IN    one    two    three
         Fail    Not Executed
     END
@@ -421,7 +422,7 @@ Separator is case- and space-sensitive 4
 FOR without any paramenters
     [Documentation]    FAIL
     ...    Multiple errors:
-    ...    - FOR loop has no loop variables.
+    ...    - FOR loop has no variables.
     ...    - FOR loop has no 'IN' or other valid separator.
     FOR
        Fail    Not Executed
@@ -429,7 +430,7 @@ FOR without any paramenters
     Fail    Not Executed
 
 Syntax error in nested loop 1
-    [Documentation]    FAIL    FOR loop has invalid loop variable 'y'.
+    [Documentation]    FAIL    Invalid FOR loop variable 'y'.
     FOR    ${x}    IN    ok
         FOR    y    IN    nok
             Fail    Should not be executed
@@ -483,7 +484,7 @@ My UK 2
 Failing UK
     [Arguments]    ${num}
     My UK 2    ${num}
-    Should Not Be Equal    ${num}    2    Failure with ${num}    no values
+    Should Not Be Equal    ${num}    2    Failure with ${num}    values=False
 
 For In UK
     Log    Not for yet
@@ -520,6 +521,7 @@ Nested For In UK 2
     Fail    This ought to be enough
 
 Invalid END usage in UK
+    No Operation
     END
 
 Header at the end of file

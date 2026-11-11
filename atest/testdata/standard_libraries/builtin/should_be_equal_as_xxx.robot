@@ -24,7 +24,7 @@ Should Not Be Equal As Integers
     [Template]    Should Not Be Equal As Integers
     1    0
     0    ${1}
-    1    ${1}    This message only    No values
+    1    ${1}    This message only    values=False
 
 Should Not Be Equal As Integers with base
     [Documentation]    Conversion functionality tested with `Convert To Integer`
@@ -149,11 +149,11 @@ Should Be Equal As Strings multiline
     ...    --- first
     ...    +++ second
     ...    @@ -1,3 +1,4 @@
-    ...   \ foo
+    ...     foo
     ...    -bar
     ...    +bar
     ...    +gar
-    ...   \ dar
+    ...     dar
     Should Be Equal As Strings    foo\nbar\r\ndar    foo\nbar\ngar\ndar
 
 Should Be Equal As Strings multiline with custom message
@@ -162,11 +162,11 @@ Should Be Equal As Strings multiline with custom message
     ...    --- first
     ...    +++ second
     ...    @@ -1,3 +1,4 @@
-    ...   \ foo
+    ...     foo
     ...    -bar
     ...    +bar
     ...    +gar
-    ...   \ dar
+    ...     dar
     Should Be Equal As Strings    foo\nbar\r\ndar    foo\nbar\ngar\ndar
     ...    msg=Custom message of mine
 
@@ -176,11 +176,11 @@ Should Be Equal As Strings repr multiline
     ...    --- first
     ...    +++ second
     ...    @@ -1,3 +1,4 @@
-    ...   \ 'foo\\n'
+    ...     'foo\\n'
     ...    -'bar\\r\\n'
     ...    +'bar\\n'
     ...    +'gar\\n'
-    ...   \ 'dar'
+    ...     'dar'
     Should Be Equal As Strings    foo\nbar\r\ndar    foo\nbar\ngar\ndar    formatter=repr
 
 Should Not Be Equal As Strings

@@ -61,8 +61,8 @@ are processed and they have conflicting modes.
 __ `Test execution`_
 __ `Task execution`_
 
-Creating different reports and logs
------------------------------------
+Creating reports, logs and output files
+---------------------------------------
 
 You can use Rebot for creating the same reports and logs that
 are created automatically during the test execution. Of course, it is
@@ -80,20 +80,27 @@ Another common usage is creating only the output file when running tests
 for example, be executed on different environments, output files collected
 to a central place, and reports and logs created there.
 
-Combining outputs
+Rebot does not create XML output files by default, but it is possible to
+create them by using the :option:`--output (-o)` option. Log and report
+are created by default, but they can be disabled by using value `NONE`
+(case-insensitive) if they are not needed::
+
+   rebot --include smoke --output smoke.xml --log none --report none original.xml
+
+Combining results
 -----------------
 
 An important feature in Rebot is its ability to combine
-outputs from different test execution rounds. This capability allows,
+results from different execution rounds. This capability allows,
 for example, running the same test cases on different environments and
-generating an overall report from all outputs. Combining outputs is
+generating an overall report from all outputs. Combining results is
 extremely easy, all that needs to be done is giving several output
 files as arguments::
 
    rebot output1.xml output2.xml
    rebot outputs/*.xml
 
-When outputs are combined, a new top-level test suite is created so
+When results are combined, a new top-level test suite is created so
 that test suites in the given output files are its child suites. This
 works the same way when `multiple test data files or directories are
 executed`__, and also in this case the name of the top-level test
@@ -102,12 +109,12 @@ and spaces. These automatically generated names are not that good, and
 it is often a good idea to use :option:`--name` to give a more
 meaningful name::
 
-   rebot --name Browser_Compatibility firefox.xml opera.xml safari.xml ie.xml
-   rebot --include smoke --name Smoke_Tests c:\results\*.xml
+   rebot --name "Browser Compatibility" firefox.xml opera.xml safari.xml ie.xml
+   rebot --include smoke --name Smoke c:\results\*.xml
 
 __ `Specifying test data to be executed`_
 
-Merging outputs
+Merging results
 ---------------
 
 If same tests are re-executed or a single test suite executed in pieces,
@@ -117,10 +124,18 @@ Merging is done by using :option:`--merge (-R)` option which changes the way how
 Rebot combines two or more output files. This option itself takes no
 arguments and all other command line options can be used with it normally::
 
-   rebot --merge --name Example original.xml merged.xml
+   rebot --merge original.xml merged.xml
+   rebot --merge --name Example first.xml second.xml third.xml
 
-How merging works in practice is explained in the following sections discussing
-its two main use cases.
+When suites are merged, documentation, suite setup and suite teardown are got
+from the last merged suite. Suite metadata from all merged suites is preserved
+so that values in latter suites have precedence.
+
+How merging tests works is explained in the following sections discussing
+the two main merge use cases.
+
+.. note:: Getting suite documentation and metadata from merged suites is new in
+          Robot Framework 6.0.
 
 Merging re-executed tests
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -132,7 +147,7 @@ accomplished by `selecting test cases`_ by names (:option:`--test` and
 or by previous status (:option:`--rerunfailed` or :option:`--rerunfailedsuites`).
 
 Combining re-execution results with the original results using the default
-`combining outputs`_ approach does not work too well. The main problem is
+`combining results`_ approach does not work too well. The main problem is
 that you get separate test suites and possibly already fixed failures are
 also shown. In this situation it is better to use :option:`--merge (-R)`
 option to tell Rebot to merge the results instead. In practice this
@@ -173,3 +188,54 @@ suites found from all given output files. If some test is found from multiple
 outputs, latest results replace the earlier ones like explained in the previous
 section. Also this merging strategy requires the top-level test suites to
 be same in all outputs.
+
+JSON output files
+-----------------
+
+Rebot can create and process output files also in the JSON_ format.
+Creating JSON output files is done using the normal :option:`--output` option
+so that the specified file has a :file:`.json` extension::
+
+   rebot --output output.json output.xml
+
+When reading output files, JSON files are automatically recognized by
+the extension::
+
+   rebot output.json
+   rebot output1.json output2.json
+
+When combining or merging results, it is possible to mix JSON and XML output files::
+
+   rebot output1.xml output2.json
+   rebot --merge original.xml rerun.json
+
+The JSON output file structure is documented in the :file:`result.json` `schema file`_.
+
+.. note:: Support for JSON output files is new in Robot Framework 7.0.
+          Prior to Robot Framework 7.2 JSON output files contained only
+          information about the executed suite, but nowadays they contain
+          the same result data as `XML output files`_.
+
+Controlling Rebot console output
+---------------------------------
+
+By default, Rebot reports output file paths and possible errors and warnings
+on the console. This can be controlled with the :option:`--console` option
+that supports the following case-insensitive values:
+
+`verbose`
+    Report output file paths, errors and warnings (default).
+
+`quiet`
+    No output except for errors and warnings.
+
+`none`
+    No output whatsoever.
+
+The :option:`--quiet` option is a shortcut for `--console quiet`.
+
+In addition to the built-in values, :option:`--console` also accepts
+`custom console loggers`_, using the same mechanism as with ``robot``.
+
+.. note:: Support for :option:`--console` and :option:`--quiet` with Rebot
+          is new in Robot Framework 7.5.

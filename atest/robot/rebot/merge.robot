@@ -15,11 +15,11 @@ ${MERGE 2}        %{TEMPDIR}/merge-2.xml
 ...               Suite1 First             Suite1 Second
 ...               Test With Double Underscore    Test With Prefix    Third In Suite1
 ...               Suite2 First             Suite3 First
-@{ALL SUITES}     Fourth                   Subsuites          Subsuites2
+@{ALL SUITES}     Fourth                   Subsuites          Custom name for 📂 'subsuites2'
 ...               Suite With Double Underscore    Suite With Prefix
 ...               Tsuite1                  Tsuite2            Tsuite3
 @{SUB SUITES 1}   Sub1                     Sub2
-@{SUB SUITES 2}   Sub.suite.4              Subsuite3
+@{SUB SUITES 2}   Sub.suite.4              Custom name for 📜 'subsuite3.robot'
 @{RERUN TESTS}    Suite4 First             SubSuite1 First
 @{RERUN SUITES}   Fourth                   Subsuites
 
@@ -32,6 +32,14 @@ Merge re-executed tests
 Merge suite setup and teardown
     [Setup]   Should Be Equal    ${PREV_TEST_STATUS}    PASS
     Suite setup and teardown should have been merged
+
+Merge suite documentation and metadata
+    [Setup]   Should Be Equal    ${PREV_TEST_STATUS}    PASS
+    Suite documentation and metadata should have been merged
+
+Suite elapsed time should be updated
+    [Setup]   Should Be Equal    ${PREV_TEST_STATUS}    PASS
+    Should Be True    $SUITE.elapsed_time > $ORIGINAL_ELAPSED
 
 Merge re-executed and re-re-executed tests
     Re-run tests
@@ -66,9 +74,9 @@ Using other options
     ...              --merge. Most importantly verify that options handled
     ...              by ExecutionResult (--flattenkeyword) work correctly.
     Re-run tests
-    Run merge    --nomerge --log log.html --merge --flattenkeyword name:BuiltIn.Log --name Custom
+    Run merge    --nomerge --log log.html --merge --flattenkeyword name:BuiltIn.Fail --name Custom
     Test merge should have been successful    suite name=Custom
-    Log should have been created with all Log keywords flattened
+    Log should have been created with Fail keywords flattened
 
 Merge ignores skip
     Create Output With Robot    ${ORIGINAL}    ${EMPTY}    rebot/merge_statuses.robot
@@ -78,14 +86,20 @@ Merge ignores skip
     ...    *HTML* Test has been re-executed and results merged.
     ...    Latter result had <span class="skip">SKIP</span> status and was ignored. Message:
     Should Contain Tests    ${SUITE}
-    ...    Pass=PASS:${prefix}\nTest skipped using '--skip' command line option.
-    ...    Fail=FAIL:${prefix}\nTest skipped using '--skip' command line option.<hr>Original message:\nNot &lt;b&gt;HTML&lt;/b&gt; fail
+    ...    Pass=PASS:${prefix}\nTest skipped using 'NOT skip' tag pattern.
+    ...    Fail=FAIL:${prefix}\nTest skipped using 'NOT skip' tag pattern.<hr>Original message:\nNot &lt;b&gt;HTML&lt;/b&gt; fail
     ...    Skip=SKIP:${prefix}\n<b>HTML</b> skip<hr>Original message:\n<b>HTML</b> skip
 
 *** Keywords ***
 Run original tests
-    Create Output With Robot    ${ORIGINAL}    --variable FAIL:YES --variable LEVEL:WARN    ${SUITES}
+    ${options} =    Catenate
+    ...    --variable FAIL:YES
+    ...    --variable LEVEL:WARN
+    ...    --doc "Doc for original run"
+    ...    --metadata Original:True
+    Create Output With Robot    ${ORIGINAL}    ${options}    ${SUITES}
     Verify original tests
+    VAR    ${ORIGINAL ELAPSED}    ${SUITE.elapsed_time}    scope=SUITE
 
 Verify original tests
     Should Be Equal    ${SUITE.name}    Suites
@@ -98,12 +112,15 @@ Verify original tests
 Re-run tests
     [Arguments]    ${options}=
     ${options} =    Catenate
+    ...    --doc "Doc for re-run"
+    ...    --metadata ReRun:True
     ...    --variable SUITE_SETUP:NoOperation  # Affects misc/suites/__init__.robot
     ...    --variable SUITE_TEARDOWN:NONE      #           -- ;; --
     ...    --variable SETUP_MSG:Rerun!         # Affects misc/suites/fourth.robot
     ...    --variable TEARDOWN_MSG:New!        #           -- ;; --
     ...    --variable SETUP:NONE               # Affects misc/suites/subsuites/sub1.robot
     ...    --variable TEARDOWN:NONE            #           -- ;; --
+    ...    --variable SLEEP:0.5                #           -- ;; --
     ...    --rerunfailed ${ORIGINAL} ${options}
     Create Output With Robot    ${MERGE 1}    ${options}    ${SUITES}
     Should Be Equal    ${SUITE.name}    Suites
@@ -164,14 +181,19 @@ Test merge should have been successful
     ...    ${SUITE.suites[7]}
 
 Suite setup and teardown should have been merged
-    Should Be Equal      ${SUITE.setup.name}                           BuiltIn.No Operation
+    Should Be Equal      ${SUITE.setup.full_name}                      BuiltIn.No Operation
     Should Be Equal      ${SUITE.teardown.name}                        ${NONE}
     Should Be Equal      ${SUITE.suites[1].name}                       Fourth
-    Check Log Message    ${SUITE.suites[1].setup.msgs[0]}              Rerun!
-    Check Log Message    ${SUITE.suites[1].teardown.msgs[0]}           New!
+    Check Log Message    ${SUITE.suites[1].setup[0]}                   Rerun!
+    Check Log Message    ${SUITE.suites[1].teardown[0]}                New!
     Should Be Equal      ${SUITE.suites[2].suites[0].name}             Sub1
     Should Be Equal      ${SUITE.suites[2].suites[0].setup.name}       ${NONE}
     Should Be Equal      ${SUITE.suites[2].suites[0].teardown.name}    ${NONE}
+
+Suite documentation and metadata should have been merged
+    Should Be Equal      ${SUITE.doc}                                  Doc for re-run
+    Should Be Equal      ${SUITE.metadata}[ReRun]                      True
+    Should Be Equal      ${SUITE.metadata}[Original]                   True
 
 Test add should have been successful
     Should Be Equal    ${SUITE.name}    Suites
@@ -227,7 +249,7 @@ Warnings should have been merged
     Check Log Message    ${ERRORS[0]}    Original message    WARN
     Check Log Message    ${ERRORS[1]}    Override    WARN
     ${tc} =    Check Test Case    SubSuite1 First
-    Check Log Message    ${tc.kws[0].msgs[0]}    Override    WARN
+    Check Log Message    ${tc[0, 0]}    Override    WARN
 
 Merge should have failed
     Stderr Should Be Equal To
@@ -237,15 +259,15 @@ Merge should have failed
 Timestamps should be cleared
     [Arguments]    @{suites}
     FOR    ${suite}    IN    @{suites}
-        Should Be Equal    ${suite.starttime}    ${None}
-        Should Be Equal    ${suite.endtime}    ${None}
+        Should Be Equal    ${suite.start_time}    ${None}
+        Should Be Equal    ${suite.end_time}    ${None}
     END
 
 Timestamps should be set
     [Arguments]    @{suites}
     FOR    ${suite}    IN    @{suites}
-        Timestamp Should Be Valid    ${suite.starttime}
-        Timestamp Should Be Valid    ${suite.endtime}
+        Timestamp Should Be Valid    ${suite.start_time}
+        Timestamp Should Be Valid    ${suite.end_time}
     END
 
 Create expected merge message header
@@ -300,7 +322,6 @@ Create expected multi-merge message
     ...    ${message 1}
     ...    <hr>${message 2}
 
-Log should have been created with all Log keywords flattened
+Log should have been created with Fail keywords flattened
     ${log} =    Get File    ${OUTDIR}/log.html
-    Should Not Contain    ${log}    "*<p>Logs the given message with the given level.\\x3c/p>"
-    Should Contain    ${log}    "*<p>Logs the given message with the given level.\\x3c/p>\\n<p><i><b>Content flattened.\\x3c/b>\\x3c/i>\\x3c/p>"
+    Should Contain    ${log}    "*Content flattened."

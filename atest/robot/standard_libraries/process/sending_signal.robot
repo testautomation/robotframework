@@ -6,35 +6,30 @@ Resource         atest_resource.robot
 *** Test Cases ***
 Sending INT signal
     ${tc} =    Check Test Case    ${TESTNAME}
-    Check Log Message    ${tc.kws[0].kws[1].msgs[0]}    Sending signal INT (2).
+    Check Log Message    ${tc[0, 1, 0]}    Sending signal INT (2).
 
 Sending SIGINT signal
     ${tc} =    Check Test Case    ${TESTNAME}
-    Check Log Message    ${tc.kws[0].kws[1].msgs[0]}    Sending signal SIGINT (2).
+    Check Log Message    ${tc[0, 1, 0]}    Sending signal SIGINT (2).
 
 Sending INT signal as a text number
     ${tc} =    Check Test Case    ${TESTNAME}
-    Check Log Message    ${tc.kws[0].kws[1].msgs[0]}    Sending signal 2 (2).
+    Check Log Message    ${tc[0, 1, 0]}    Sending signal 2 (2).
 
 Sending INT signal as a number
     ${tc} =    Check Test Case    ${TESTNAME}
-    Check Log Message    ${tc.kws[0].kws[1].msgs[0]}    Sending signal 2 (2).
+    Check Log Message    ${tc[0, 1, 0]}    Sending signal 2 (2).
 
 Send other well-known signals
-    Check Test Case    ${TESTNAME}
-
-By default signal is not sent to process running in shell
-    [Documentation]    This depends on shell semantics and is tested only on Linux.
-    [Tags]    require-linux
     Check Test Case    ${TESTNAME}
 
 By default signal is sent only to parent process
     Check Test Case    ${TESTNAME}
 
-Signal can be sent to process running in shell
+Signal can be sent to child processes
     Check Test Case    ${TESTNAME}
 
-Signal can be sent to child processes
+Signal can be sent to process running in shell
     Check Test Case    ${TESTNAME}
 
 Sending an unknown signal

@@ -13,203 +13,316 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from inspect import isclass, signature, Parameter
-from typing import get_type_hints
+from abc import ABC, abstractmethod
+from inspect import isclass, Parameter, signature
+from typing import Any, Callable, get_type_hints
+
+try:
+    from annotationlib import Format
+except ImportError:
+    Format = None
 
 from robot.errors import DataError
-from robot.utils import is_string, split_from_equals
-from robot.variables import is_assign, is_scalar_assign
+from robot.utils import NOT_SET, split_from_equals
+from robot.variables import search_variable
 
 from .argumentspec import ArgumentSpec
+from .typeinfo import TypeInfo
 
 
-class _ArgumentParser:
+class ArgumentParser(ABC):
 
-    def __init__(self, type='Keyword', error_reporter=None):
-        self._type = type
-        self._error_reporter = error_reporter
+    def __init__(
+        self,
+        type: str = "Keyword",
+        error_reporter: "Callable[[str], None] | None" = None,
+    ):
+        self.type = type
+        self.error_reporter = error_reporter
 
-    def parse(self, source, name=None):
+    @abstractmethod
+    def parse(self, source: Any, name: "str | None" = None) -> ArgumentSpec:
         raise NotImplementedError
 
-    def _report_error(self, error):
-        if self._error_reporter:
-            self._error_reporter(error)
+    def _report_error(self, error: str):
+        if self.error_reporter:
+            self.error_reporter(error)
         else:
-            raise DataError('Invalid argument specification: %s' % error)
+            raise DataError(f"Invalid argument specification: {error}")
 
 
-class PythonArgumentParser(_ArgumentParser):
+class PythonArgumentParser(ArgumentParser):
 
-    def parse(self, handler, name=None):
-        spec = ArgumentSpec(name, self._type)
-        self._set_args(spec, handler)
-        self._set_types(spec, handler)
-        return spec
-
-    def _set_args(self, spec, handler):
+    def parse(self, method, name=None):
         try:
-            sig = signature(handler)
-        except ValueError:  # Can occur w/ C functions (incl. many builtins).
-            spec.var_positional = 'args'
-            return
+            config = {"annotation_format": Format.FORWARDREF} if Format else {}
+            sig = signature(method, **config)
+        except ValueError:  # Can occur with C functions (incl. many builtins).
+            return ArgumentSpec(name, self.type, var_positional="args")
+        except Exception as err:
+            raise DataError(str(err))
         parameters = list(sig.parameters.values())
         # `inspect.signature` drops `self` with bound methods and that's the case when
         # inspecting keywords. `__init__` is got directly from class (i.e. isn't bound)
         # so we need to handle that case ourselves.
         # Partial objects do not have __name__ at least in Python =< 3.10.
-        if getattr(handler, '__name__', None) == '__init__':
+        if getattr(method, "__name__", None) == "__init__":
             parameters = parameters[1:]
-        setters = {
-            Parameter.POSITIONAL_ONLY: spec.positional_only.append,
-            Parameter.POSITIONAL_OR_KEYWORD: spec.positional_or_named.append,
-            Parameter.VAR_POSITIONAL: lambda name: setattr(spec, 'var_positional', name),
-            Parameter.KEYWORD_ONLY: spec.named_only.append,
-            Parameter.VAR_KEYWORD: lambda name: setattr(spec, 'var_named', name),
-        }
-        for param in parameters:
-            setters[param.kind](param.name)
-            if param.default is not param.empty:
-                spec.defaults[param.name] = param.default
-
-    def _set_types(self, spec, handler):
-        # If types are set using the `@keyword` decorator, use them. Including when
-        # types are explicitly disabled with `@keyword(types=None)`. Otherwise read
-        # type hints.
-        if isclass(handler):
-            handler = handler.__init__
-        robot_types = getattr(handler, 'robot_types', ())
-        if robot_types or robot_types is None:
-            spec.types = robot_types
-        else:
-            spec.types = self._get_type_hints(handler)
-
-    def _get_type_hints(self, handler):
-        try:
-            return get_type_hints(handler)
-        except Exception:  # Can raise pretty much anything
-            # Not all functions have `__annotations__`.
-            # https://github.com/robotframework/robotframework/issues/4059
-            return getattr(handler, '__annotations__', {})
-
-
-class _ArgumentSpecParser(_ArgumentParser):
-
-    def parse(self, argspec, name=None):
-        spec = ArgumentSpec(name, self._type)
-        named_only = False
-        for arg in argspec:
-            arg = self._validate_arg(arg)
-            if spec.var_named:
-                self._report_error('Only last argument can be kwargs.')
-            elif isinstance(arg, tuple):
-                arg, default = arg
-                arg = self._add_arg(spec, arg, named_only)
-                spec.defaults[arg] = default
-            elif self._is_kwargs(arg):
-                spec.var_named = self._format_kwargs(arg)
-            elif self._is_varargs(arg):
-                if named_only:
-                    self._report_error('Cannot have multiple varargs.')
-                if not self._is_kw_only_separator(arg):
-                    spec.var_positional = self._format_varargs(arg)
-                named_only = True
-            elif spec.defaults and not named_only:
-                self._report_error('Non-default argument after default arguments.')
-            else:
-                self._add_arg(spec, arg, named_only)
+        spec = self._create_spec(parameters, name)
+        self._set_types(spec, method)
         return spec
 
+    def _create_spec(self, parameters, name):
+        positional_only = []
+        positional_or_named = []
+        var_positional = None
+        named_only = []
+        var_named = None
+        defaults = {}
+        for param in parameters:
+            kind = param.kind
+            if kind == Parameter.POSITIONAL_ONLY:
+                positional_only.append(param.name)
+            elif kind == Parameter.POSITIONAL_OR_KEYWORD:
+                positional_or_named.append(param.name)
+            elif kind == Parameter.VAR_POSITIONAL:
+                var_positional = param.name
+            elif kind == Parameter.KEYWORD_ONLY:
+                named_only.append(param.name)
+            elif kind == Parameter.VAR_KEYWORD:
+                var_named = param.name
+            if param.default is not param.empty:
+                defaults[param.name] = param.default
+        return ArgumentSpec(
+            name,
+            self.type,
+            positional_only,
+            positional_or_named,
+            var_positional,
+            named_only,
+            var_named,
+            defaults,
+        )
+
+    def _set_types(self, spec, method):
+        types = self._get_types(method)
+        if isinstance(types, dict) and "return" in types:
+            spec.return_type = types.pop("return")
+        spec.types = types
+
+    def _get_types(self, method):
+        # If types are set using the `@keyword` decorator, use them. Including when
+        # types are explicitly disabled with `@keyword(types=None)`. Otherwise get
+        # type hints.
+        if isclass(method):
+            method = method.__init__
+        types = getattr(method, "robot_types", ())
+        if types or types is None:
+            return types
+        try:
+            return get_type_hints(method)
+        except Exception:  # Can raise pretty much anything
+            try:
+                # Not all functions have `__annotations__`.
+                # https://github.com/robotframework/robotframework/issues/4059
+                return getattr(method, "__annotations__", {})
+            except Exception:
+                # Handle deferred annotations on Python 3.14.
+                # https://github.com/robotframework/robotframework/issues/5658
+                if Format:
+                    return get_type_hints(method, format=Format.STRING)
+                return {}
+
+
+class ArgumentSpecParser(ArgumentParser):
+
+    def parse(self, arguments, name=None):
+        positional_only = []
+        positional_or_named = []
+        var_positional = None
+        named_only = []
+        var_named = None
+        defaults = {}
+        types = {}
+        named_only_separator_seen = positional_only_separator_seen = False
+        target = positional_or_named
+        for arg in arguments:
+            arg, default = self._validate_arg(arg)
+            if var_named:
+                self._report_error("Only last argument can be kwargs.")
+            elif self._is_positional_only_separator(arg):
+                if positional_only_separator_seen:
+                    self._report_error("Too many positional-only separators.")
+                if named_only_separator_seen:
+                    self._report_error(
+                        "Positional-only separator must be before named-only arguments."
+                    )
+                positional_only = positional_or_named
+                target = positional_or_named = []
+                positional_only_separator_seen = True
+            elif default is not NOT_SET:
+                self._parse_type(arg, types)
+                arg = self._format_arg(arg)
+                target.append(arg)
+                defaults[arg] = default
+            elif self._is_var_named(arg):
+                self._parse_type(arg, types)
+                var_named = self._format_var_named(arg)
+            elif self._is_var_positional(arg):
+                if named_only_separator_seen:
+                    self._report_error("Cannot have multiple varargs.")
+                elif not self._is_named_only_separator(arg):
+                    self._parse_type(arg, types)
+                    var_positional = self._format_var_positional(arg)
+                named_only_separator_seen = True
+                target = named_only
+            else:
+                if defaults and not named_only_separator_seen:
+                    self._report_error("Non-default argument after default arguments.")
+                self._parse_type(arg, types)
+                arg = self._format_arg(arg)
+                target.append(arg)
+        return ArgumentSpec(
+            name,
+            self.type,
+            positional_only,
+            positional_or_named,
+            var_positional,
+            named_only,
+            var_named,
+            defaults,
+            types=types,
+        )
+
+    @abstractmethod
     def _validate_arg(self, arg):
         raise NotImplementedError
 
-    def _is_kwargs(self, arg):
+    @abstractmethod
+    def _is_var_positional(self, arg):
         raise NotImplementedError
 
-    def _format_kwargs(self, kwargs):
+    @abstractmethod
+    def _is_var_named(self, arg):
         raise NotImplementedError
 
-    def _is_kw_only_separator(self, arg):
+    @abstractmethod
+    def _is_positional_only_separator(self, arg):
         raise NotImplementedError
 
-    def _is_varargs(self, arg):
+    @abstractmethod
+    def _is_named_only_separator(self, arg):
         raise NotImplementedError
 
-    def _format_varargs(self, varargs):
-        raise NotImplementedError
-
+    @abstractmethod
     def _format_arg(self, arg):
-        return arg
+        raise NotImplementedError
 
-    def _add_arg(self, spec, arg, named_only=False):
-        arg = self._format_arg(arg)
-        target = spec.positional_or_named if not named_only else spec.named_only
-        target.append(arg)
-        return arg
+    @abstractmethod
+    def _format_var_named(self, arg):
+        raise NotImplementedError
+
+    @abstractmethod
+    def _format_var_positional(self, arg):
+        raise NotImplementedError
+
+    @abstractmethod
+    def _parse_type(self, arg, types):
+        raise NotImplementedError
 
 
-class DynamicArgumentParser(_ArgumentSpecParser):
+class DynamicArgumentParser(ArgumentSpecParser):
 
     def _validate_arg(self, arg):
         if isinstance(arg, tuple):
-            if self._is_invalid_tuple(arg):
-                self._report_error('Invalid argument "%s".' % (arg,))
+            if not self._is_valid_tuple(arg):
+                self._report_error(f'Invalid argument "{arg}".')
+                return None, NOT_SET
             if len(arg) == 1:
-                return arg[0]
-            return arg
-        if '=' in arg:
-            return tuple(arg.split('=', 1))
+                return arg[0], NOT_SET
+            return arg[0], arg[1]
+        if "=" in arg:
+            return tuple(arg.split("=", 1))
+        return arg, NOT_SET
+
+    def _is_valid_tuple(self, arg):
+        return (
+            len(arg) in (1, 2)
+            and isinstance(arg[0], str)
+            and not (arg[0].startswith("*") and len(arg) == 2)
+        )
+
+    def _is_var_positional(self, arg):
+        return arg[:1] == "*"
+
+    def _is_var_named(self, arg):
+        return arg[:2] == "**"
+
+    def _is_positional_only_separator(self, arg):
+        return arg == "/"
+
+    def _is_named_only_separator(self, arg):
+        return arg == "*"
+
+    def _format_arg(self, arg):
         return arg
 
-    def _is_invalid_tuple(self, arg):
-        return (len(arg) > 2
-                or not is_string(arg[0])
-                or (arg[0].startswith('*') and len(arg) > 1))
+    def _format_var_positional(self, arg):
+        return arg[1:]
 
-    def _is_kwargs(self, arg):
-        return arg.startswith('**')
+    def _format_var_named(self, arg):
+        return arg[2:]
 
-    def _format_kwargs(self, kwargs):
-        return kwargs[2:]
-
-    def _is_varargs(self, arg):
-        return arg.startswith('*')
-
-    def _is_kw_only_separator(self, arg):
-        return arg == '*'
-
-    def _format_varargs(self, varargs):
-        return varargs[1:]
+    def _parse_type(self, arg, types):
+        pass
 
 
-class UserKeywordArgumentParser(_ArgumentSpecParser):
+class UserKeywordArgumentParser(ArgumentSpecParser):
 
     def _validate_arg(self, arg):
         arg, default = split_from_equals(arg)
-        if not (is_assign(arg) or arg == '@{}'):
-            self._report_error("Invalid argument syntax '%s'." % arg)
-        if default is None:
-            return arg
-        if not is_scalar_assign(arg):
-            typ = 'list' if arg[0] == '@' else 'dictionary'
-            self._report_error("Only normal arguments accept default values, "
-                               "%s arguments like '%s' do not." % (typ, arg))
-        return arg, default
+        match = search_variable(arg, parse_type=True, ignore_errors=True)
+        if not (match.is_assign() or self._is_named_only_separator(match)):
+            self._report_error(f"Invalid argument syntax '{arg}'.")
+            match = search_variable("")
+            default = NOT_SET
+        elif default is None:
+            default = NOT_SET
+        elif arg[0] != "$":
+            kind = "list" if arg[0] == "@" else "dictionary"
+            self._report_error(
+                f"Only normal arguments accept default values, "
+                f"{kind} arguments like '{arg}' do not."
+            )
+            default = NOT_SET
+        return match, default
 
-    def _is_kwargs(self, arg):
-        return arg and arg[0] == '&'
+    def _is_var_positional(self, match):
+        return match.identifier == "@"
 
-    def _format_kwargs(self, kwargs):
-        return kwargs[2:-1]
+    def _is_var_named(self, match):
+        return match.identifier == "&"
 
-    def _is_varargs(self, arg):
-        return arg and arg[0] == '@'
+    def _is_positional_only_separator(self, arg):
+        return False
 
-    def _is_kw_only_separator(self, arg):
-        return arg == '@{}'
+    def _is_named_only_separator(self, match):
+        return match.identifier == "@" and not match.base
 
-    def _format_varargs(self, varargs):
-        return varargs[2:-1]
+    def _format_arg(self, match):
+        return match.base
 
-    def _format_arg(self, arg):
-        return arg[2:-1]
+    def _format_var_named(self, match):
+        return match.base
+
+    def _format_var_positional(self, match):
+        return match.base
+
+    def _parse_type(self, match, types):
+        try:
+            info = TypeInfo.from_variable(match, handle_list_and_dict=False)
+        except DataError as err:
+            self._report_error(f"Invalid argument '{match}': {err}")
+        else:
+            if info:
+                types[match.base] = info

@@ -1,0 +1,50 @@
+[tool.black]
+line_length = 88
+# When we add [project] with requires-python, remove this and Ruff's target-version
+target-version = ["py38", "py39", "py310", "py311", "py312", "py313"]
+
+[tool.ruff]
+target-version = "py38"
+
+[tool.ruff.per-file-target-version]
+"atest/testdata/keywords/type_conversion/TypeStatement.py" = "py312"
+"atest/testdata/keywords/type_conversion/Recursion.py" = "py312"
+"src/robot/running/arguments/typealiasresolver.py" = "py312"
+"utest/running/_test_typealiasresolver.py" = "py312"
+"src/web/libdoc/DevLibrary.py" = "py312"
+
+[tool.ruff.lint]
+ignore = [
+    "BLE001", "C408", "DTZ", "E402", "E731", "FA100", "FA102", "G010", "I001",
+    "ISC004", "LOG015", "N999", "PLC0105", "PLC0206", "PLC0414", "PLR1704",
+    "PYI019", "PYI025", "PYI041", "PYI061", "RET501", "RUF012", "RUF023",
+    "RUF100", "SIM115", "SIM905", "TRY004"
+]
+[tool.ruff.lint.per-file-ignores]
+"atest/testdata/keywords/type_conversion/DefaultValues.py" = ["B006", "B008"]
+"atest/testdata/keywords/type_conversion/unions.py" = ["B008"]
+"atest/testdata/keywords/type_conversion/unionsugar.py" = ["B008"]
+"utest/parsing/test_statements_in_invalid_position.py" = ["RUF028"]
+"utest/running/_test_typealiasresolver.py" = ["UP007"]
+
+[tool.ruff.lint.pyflakes]
+# Needed due to https://github.com/astral-sh/ruff/issues/9298
+extend-generics = ["robot.model.body.BaseBranches"]
+
+[tool.ruff.lint.isort]
+# Ruff is used to sort and fix imports first. Multiline imports are organized so
+# that each item is on its own line. This is same as the Vertical Hanging Indent
+# mode with isort.
+combine-as-imports = true
+order-by-type = false
+
+[tool.isort]
+# isort is used after Ruff to sort "normal" imports so that multiline imports use
+# the Hanging Grid Grouped mode. Files contained redundant import aliases denoting
+# module/package API are excluded. For details about multiline modes see:
+# https://pycqa.github.io/isort/docs/configuration/multi_line_output_modes.html
+multi_line_output = 5
+extend_skip = ["__init__.py", "src/robot/api/console.py", "src/robot/api/parsing.py"]
+combine_as_imports = true
+order_by_type = false
+line_length = 88

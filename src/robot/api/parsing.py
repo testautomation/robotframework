@@ -196,6 +196,7 @@ Blocks:
 - :class:`~robot.parsing.model.blocks.Try`
 - :class:`~robot.parsing.model.blocks.For`
 - :class:`~robot.parsing.model.blocks.While`
+- :class:`~robot.parsing.model.blocks.Group` (new in RF 7.2)
 
 Statements:
 
@@ -207,6 +208,7 @@ Statements:
 - :class:`~robot.parsing.model.statements.Metadata`
 - :class:`~robot.parsing.model.statements.ForceTags`
 - :class:`~robot.parsing.model.statements.DefaultTags`
+- :class:`~robot.parsing.model.statements.SuiteName`
 - :class:`~robot.parsing.model.statements.SuiteSetup`
 - :class:`~robot.parsing.model.statements.SuiteTeardown`
 - :class:`~robot.parsing.model.statements.TestSetup`
@@ -222,7 +224,8 @@ Statements:
 - :class:`~robot.parsing.model.statements.Template`
 - :class:`~robot.parsing.model.statements.Timeout`
 - :class:`~robot.parsing.model.statements.Arguments`
-- :class:`~robot.parsing.model.statements.Return`
+- :class:`~robot.parsing.model.statements.Return` (deprecated, will mean ``ReturnStatement`` in RF 8.0)
+- :class:`~robot.parsing.model.statements.ReturnSetting` (alias for ``Return``, new in RF 6.1)
 - :class:`~robot.parsing.model.statements.KeywordCall`
 - :class:`~robot.parsing.model.statements.TemplateArguments`
 - :class:`~robot.parsing.model.statements.IfHeader`
@@ -234,11 +237,14 @@ Statements:
 - :class:`~robot.parsing.model.statements.FinallyHeader`
 - :class:`~robot.parsing.model.statements.ForHeader`
 - :class:`~robot.parsing.model.statements.WhileHeader`
+- :class:`~robot.parsing.model.statements.GroupHeader` (new in RF 7.2)
+- :class:`~robot.parsing.model.statements.Var` (new in RF 7.0)
 - :class:`~robot.parsing.model.statements.End`
 - :class:`~robot.parsing.model.statements.ReturnStatement`
 - :class:`~robot.parsing.model.statements.Break`
 - :class:`~robot.parsing.model.statements.Continue`
 - :class:`~robot.parsing.model.statements.Comment`
+- :class:`~robot.parsing.model.statements.Config` (new in RF 6.0)
 - :class:`~robot.parsing.model.statements.Error`
 - :class:`~robot.parsing.model.statements.EmptyLine`
 
@@ -257,7 +263,7 @@ case file contains::
     class TestNamePrinter(ModelVisitor):
 
         def visit_File(self, node):
-            print(f"File '{node.source}' has following tests:")
+            print(f"File '{node.source}' has the following tests:")
             # Call `generic_visit` to visit also child nodes.
             self.generic_visit(node)
 
@@ -272,7 +278,7 @@ case file contains::
 When the above code is run using the earlier :file:`example.robot`, the
 output is this::
 
-    File 'example.robot' has following tests:
+    File 'example.robot' has the following tests:
     - Example (on line 2)
     - Second example (on line 5)
 
@@ -480,73 +486,80 @@ get the executable suite by using the
 """
 
 from robot.parsing import (
-    get_tokens,
-    get_resource_tokens,
-    get_init_tokens,
-    get_model,
-    get_resource_model,
-    get_init_model,
-    Token
+    get_init_model as get_init_model,
+    get_init_tokens as get_init_tokens,
+    get_model as get_model,
+    get_resource_model as get_resource_model,
+    get_resource_tokens as get_resource_tokens,
+    get_tokens as get_tokens,
+    Token as Token,
 )
 from robot.parsing.model.blocks import (
-    File,
-    SettingSection,
-    VariableSection,
-    TestCaseSection,
-    KeywordSection,
-    CommentSection,
-    TestCase,
-    Keyword,
-    If,
-    Try,
-    For,
-    While
+    CommentSection as CommentSection,
+    File as File,
+    For as For,
+    Group as Group,
+    If as If,
+    Keyword as Keyword,
+    KeywordSection as KeywordSection,
+    SettingSection as SettingSection,
+    TestCase as TestCase,
+    TestCaseSection as TestCaseSection,
+    Try as Try,
+    VariableSection as VariableSection,
+    While as While,
 )
 from robot.parsing.model.statements import (
-    SectionHeader,
-    LibraryImport,
-    ResourceImport,
-    VariablesImport,
-    Documentation,
-    Metadata,
-    ForceTags,
-    DefaultTags,
-    SuiteSetup,
-    SuiteTeardown,
-    TestSetup,
-    TestTeardown,
-    TestTemplate,
-    TestTimeout,
-    Variable,
-    TestCaseName,
-    KeywordName,
-    Setup,
-    Teardown,
-    Tags,
-    Template,
-    Timeout,
-    Arguments,
-    Return,
-    KeywordCall,
-    TemplateArguments,
-    IfHeader,
-    InlineIfHeader,
-    ElseIfHeader,
-    ElseHeader,
-    TryHeader,
-    ExceptHeader,
-    FinallyHeader,
-    ForHeader,
-    WhileHeader,
-    End,
-    ReturnStatement,
-    Continue,
-    Break,
-    Comment,
-    Error,
-    EmptyLine
+    Arguments as Arguments,
+    Break as Break,
+    Comment as Comment,
+    Config as Config,
+    Continue as Continue,
+    DefaultTags as DefaultTags,
+    Documentation as Documentation,
+    ElseHeader as ElseHeader,
+    ElseIfHeader as ElseIfHeader,
+    EmptyLine as EmptyLine,
+    End as End,
+    Error as Error,
+    ExceptHeader as ExceptHeader,
+    FinallyHeader as FinallyHeader,
+    ForHeader as ForHeader,
+    GroupHeader as GroupHeader,
+    IfHeader as IfHeader,
+    InlineIfHeader as InlineIfHeader,
+    KeywordCall as KeywordCall,
+    KeywordName as KeywordName,
+    KeywordTags as KeywordTags,
+    LibraryImport as LibraryImport,
+    Metadata as Metadata,
+    ResourceImport as ResourceImport,
+    Return as Return,
+    ReturnSetting as ReturnSetting,
+    ReturnStatement as ReturnStatement,
+    SectionHeader as SectionHeader,
+    Setup as Setup,
+    SuiteName as SuiteName,
+    SuiteSetup as SuiteSetup,
+    SuiteTeardown as SuiteTeardown,
+    Tags as Tags,
+    Teardown as Teardown,
+    Template as Template,
+    TemplateArguments as TemplateArguments,
+    TestCaseName as TestCaseName,
+    TestSetup as TestSetup,
+    TestTags as TestTags,
+    TestTeardown as TestTeardown,
+    TestTemplate as TestTemplate,
+    TestTimeout as TestTimeout,
+    Timeout as Timeout,
+    TryHeader as TryHeader,
+    Var as Var,
+    Variable as Variable,
+    VariablesImport as VariablesImport,
+    WhileHeader as WhileHeader,
 )
 from robot.parsing.model.visitor import (
-    ModelTransformer,
-    ModelVisitor
+    ModelTransformer as ModelTransformer,
+    ModelVisitor as ModelVisitor,
 )

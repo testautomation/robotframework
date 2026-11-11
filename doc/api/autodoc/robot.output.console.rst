@@ -3,40 +3,56 @@ robot.output.console package
 
 .. automodule:: robot.output.console
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 Submodules
 ----------
+
+robot.output.console.base module
+--------------------------------
+
+.. automodule:: robot.output.console.base
+   :members:
+   :show-inheritance:
+   :undoc-members:
 
 robot.output.console.dotted module
 ----------------------------------
 
 .. automodule:: robot.output.console.dotted
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 robot.output.console.highlighting module
 ----------------------------------------
 
 .. automodule:: robot.output.console.highlighting
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 robot.output.console.quiet module
 ---------------------------------
 
 .. automodule:: robot.output.console.quiet
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
+
+robot.output.console.types module
+---------------------------------
+
+.. automodule:: robot.output.console.types
+   :members:
+   :show-inheritance:
+   :undoc-members:
 
 robot.output.console.verbose module
 -----------------------------------
 
 .. automodule:: robot.output.console.verbose
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:

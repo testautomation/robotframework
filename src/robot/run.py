@@ -31,19 +31,20 @@ that can be used programmatically. Other code is for internal usage.
 """
 
 import sys
+from threading import current_thread
 
-# Allows running as a script. __name__ check needed with multiprocessing:
-# https://github.com/robotframework/robotframework/issues/1137
-if 'robot' not in sys.modules and __name__ == '__main__':
-    import pythonpathsetter
+if __name__ == "__main__" and "robot" not in sys.modules:
+    from pythonpathsetter import set_pythonpath
+
+    set_pythonpath()
 
 from robot.conf import RobotSettings
+from robot.errors import DataError
 from robot.model import ModelModifier
-from robot.output import LOGGER, pyloggingconf
+from robot.output import librarylogger, LOGGER, pyloggingconf
 from robot.reporting import ResultWriter
 from robot.running.builder import TestSuiteBuilder
 from robot.utils import Application, text
-
 
 USAGE = """Robot Framework -- A generic automation framework
 
@@ -89,12 +90,21 @@ Options
                           terminology so that "test" is replaced with "task"
                           in logs and reports. By default the mode is got
                           from test/task header in data files.
+    --language lang *     Activate localization. `lang` can be a name or a code
+                          of a built-in language, or a path or a module name of
+                          a custom language file.
  -F --extension value     Parse only files with this extension when executing
                           a directory. Has no effect when running individual
                           files or when using resource files. If more than one
                           extension is needed, separate them with a colon.
                           Examples: `--extension txt`, `--extension robot:txt`
                           Only `*.robot` files are parsed by default.
+ -I --parseinclude pattern *  Parse only files matching `pattern`. It can be:
+                          - a file name or pattern like `example.robot` or
+                            `*.robot` to parse all files matching that name,
+                          - a file path like `path/to/example.robot`, or
+                          - a directory path like `path/to/example` to parse
+                            all files in that directory, recursively.
  -N --name name           Set the name of the top level suite. By default the
                           name is created based on the executed file or
                           directory.
@@ -150,9 +160,9 @@ Options
                           given without `${}`. See --variablefile for a more
                           powerful variable setting mechanism.
                           Examples:
-                          --variable str:Hello       =>  ${str} = `Hello`
-                          -v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`
-                          -v x: -v y:42              =>  ${x} = ``, ${y} = `42`
+                          --variable name:Robot  =>  ${name} = `Robot`
+                          -v "hello:Hello world" =>  ${hello} = `Hello world`
+                          -v x: -v y:42          =>  ${x} = ``, ${y} = `42`
  -V --variablefile path *  Python or YAML file file to read variables from.
                           Possible arguments to the variable file can be given
                           after the path using colon or semicolon as separator.
@@ -169,6 +179,8 @@ Options
                           can also be further processed with Rebot tool. Can be
                           disabled by giving a special value `NONE`.
                           Default: output.xml
+    --legacyoutput        Create XML output file in format compatible with
+                          Robot Framework 6.x and earlier.
  -l --log file            HTML log file. Can be disabled by giving a special
                           value `NONE`. Default: log.html
                           Examples: `--log mylog.html`, `-l NONE`
@@ -229,7 +241,6 @@ Options
                           pattern. Documentation is shown in `Test Details` and
                           also as a tooltip in `Statistics by Tag`. Pattern can
                           use `*`, `?` and `[]` as wildcards like --test.
-                          Documentation can contain formatting like --doc.
                           Examples: --tagdoc mytag:Example
                                     --tagdoc "owner-*:Original author"
     --tagstatlink pattern:link:title *  Add external links into `Statistics by
@@ -252,8 +263,8 @@ Options
                           all:     remove data from all keywords
                           passed:  remove data only from keywords in passed
                                    test cases and suites
-                          for:     remove passed iterations from for loops
-                          while:   remove passed iterations from while loops
+                          for:     remove passed iterations from FOR loops
+                          while:   remove passed iterations from WHILE loops
                           wuks:    remove all but the last failing keyword
                                    inside `BuiltIn.Wait Until Keyword Succeeds`
                           name:<pattern>:  remove data from keywords that match
@@ -286,12 +297,6 @@ Options
                           tag:<pattern>:  flatten matched keywords using same
                                    matching rules as with
                                    `--removekeywords tag:<pattern>`
-    --listener class *    A class for monitoring test execution. Gets
-                          notifications e.g. when tests start and end.
-                          Arguments to the listener class can be given after
-                          the name using a colon or a semicolon as a separator.
-                          Examples: --listener MyListenerClass
-                                    --listener path/to/Listener.py:arg1:arg2
     --nostatusrc          Sets the return code to zero regardless of failures
                           in test cases. Error codes are returned normally.
     --dryrun              Verifies test data and runs tests so that library
@@ -310,16 +315,33 @@ Options
                           The seed must be an integer.
                           Examples: --randomize all
                                     --randomize tests:1234
-    --prerunmodifier class *  Class to programmatically modify the suite
-                          structure before execution.
-    --prerebotmodifier class *  Class to programmatically modify the result
-                          model before creating reports and logs.
-    --console type        How to report execution on the console.
-                          verbose:  report every suite and test (default)
-                          dotted:   only show `.` for passed test, `s` for
-                                    skipped tests, and `F` for failed tests
-                          quiet:    no output except for errors and warnings
-                          none:     no output whatsoever
+    --listener listener *  Class or module for monitoring test execution.
+                          Gets notifications e.g. when tests start and end.
+                          Arguments to the listener class can be given after
+                          the name using a colon or a semicolon as a separator.
+                          Examples: --listener MyListener
+                                    --listener path/to/Listener.py:arg1:arg2
+    --prerunmodifier modifier *  Class to programmatically modify the suite
+                          structure before execution. Accepts arguments the
+                          same way as with --listener.
+    --prerebotmodifier modifier *  Class to programmatically modify the result
+                          model before creating reports and logs. Accepts
+                          arguments the same way as with --listener.
+    --parser parser *     Custom parser class or module. Parser classes accept
+                          arguments the same way as with --listener.
+    --console console     How to report execution on the console.
+                          Built-in consoles:
+                          verbose: report every suite and test (default)
+                          dotted:  only show `.` for passed test, `s`
+                                   for skipped and `F` for failed tests
+                          quiet:   no output except for errors/warnings
+                          none:    no output whatsoever
+                          Other values are interpreted as a custom
+                          console class or module. Argument format is
+                          the same as with --listener.
+                          Examples: --console verbose
+                                    --console MyConsole
+                                    --console path/to/Console.py:arg
  -. --dotted              Shortcut for `--console dotted`.
     --quiet               Shortcut for `--console quiet`.
  -W --consolewidth chars  Width of the console output. Default is 78.
@@ -328,6 +350,9 @@ Options
                           on:   always use colors
                           ansi: like `on` but use ANSI colors also on Windows
                           off:  disable colors altogether
+    --consolelinks auto|off  Control making paths to results files hyperlinks.
+                          auto: use links when colors are enabled (default)
+                          off: disable links unconditionally
  -K --consolemarkers auto|on|off  Show markers on the console when top level
                           keywords in a test case end. Values have same
                           semantics as with --consolecolors.
@@ -367,11 +392,9 @@ has precedence regardless of how many times options are used. For example,
 `--dryrun --dryrun --nodryrun --nostatusrc --statusrc` would not activate the
 dry-run mode and would return a normal return code.
 
-Long option format is case-insensitive. For example, --SuiteStatLevel is
-equivalent to but easier to read than --suitestatlevel. Long options can
-also be shortened as long as they are unique. For example, `--logti Title`
-works while `--lo log.html` does not because the former matches only --logtitle
-but the latter matches --log, --loglevel and --logtitle.
+Long option names are case and hyphen insensitive. For example, --TagStatLink
+and --tag-stat-link are equivalent to, but easier to read than, --tagstatlink.
+Long options can also be shortened as long as they are unique.
 
 Environment Variables
 =====================
@@ -388,6 +411,17 @@ ROBOT_SYSLOG_LEVEL        Log level to use when writing to the syslog file.
                           command line option and the default is INFO.
 ROBOT_INTERNAL_TRACES     When set to any non-empty value, Robot Framework's
                           internal methods are included in error tracebacks.
+
+Return Codes
+============
+
+0                         All tests passed.
+1-249                     Returned number of tests failed.
+250                       250 or more failures.
+251                       Help or version information printed.
+252                       Invalid data or command line options.
+253                       Execution stopped by user.
+255                       Unexpected internal error.
 
 Examples
 ========
@@ -414,45 +448,61 @@ $ robot tests.robot
 class RobotFramework(Application):
 
     def __init__(self):
-        Application.__init__(self, USAGE, arg_limits=(1,), env_options='ROBOT_OPTIONS',
-                             logger=LOGGER)
+        super().__init__(
+            USAGE,
+            arg_limits=(1,),
+            env_options="ROBOT_OPTIONS",
+            logger=LOGGER,
+        )
 
     def main(self, datasources, **options):
         try:
             settings = RobotSettings(options)
-        except:
-            LOGGER.register_console_logger(stdout=options.get('stdout'),
-                                           stderr=options.get('stderr'))
+        except DataError:
+            LOGGER.register_console_logger(
+                stdout=options.get("stdout"),
+                stderr=options.get("stderr"),
+            )
             raise
-        LOGGER.register_console_logger(**settings.console_output_config)
-        LOGGER.info(f'Settings:\n{settings}')
         if settings.pythonpath:
             sys.path = settings.pythonpath + sys.path
-        builder = TestSuiteBuilder(settings.suite_names,
-                                   included_extensions=settings.extension,
-                                   rpa=settings.rpa,
-                                   allow_empty_suite=settings.run_empty_suite)
+        LOGGER.register_console_logger(**settings.console_output_config)
+        LOGGER.info(f"Settings:\n{settings}")
+        builder = TestSuiteBuilder(
+            included_extensions=settings.extension,
+            included_files=settings.parse_include,
+            custom_parsers=settings.parsers,
+            rpa=settings.rpa,
+            lang=settings.languages,
+            allow_empty_suite=settings.run_empty_suite,
+        )
         suite = builder.build(*datasources)
-        settings.rpa = suite.rpa
         if settings.pre_run_modifiers:
-            suite.visit(ModelModifier(settings.pre_run_modifiers,
-                                      settings.run_empty_suite, LOGGER))
+            modifier = ModelModifier(
+                settings.pre_run_modifiers,
+                settings.run_empty_suite,
+                LOGGER,
+            )
+            suite.visit(modifier)
         suite.configure(**settings.suite_config)
+        settings.rpa = suite.validate_execution_mode()
         with pyloggingconf.robot_handler_enabled(settings.log_level):
             old_max_error_lines = text.MAX_ERROR_LINES
             old_max_assign_length = text.MAX_ASSIGN_LENGTH
             text.MAX_ERROR_LINES = settings.max_error_lines
             text.MAX_ASSIGN_LENGTH = settings.max_assign_length
+            librarylogger.LOGGING_THREADS[0] = current_thread().name
             try:
                 result = suite.run(settings)
             finally:
                 text.MAX_ERROR_LINES = old_max_error_lines
                 text.MAX_ASSIGN_LENGTH = old_max_assign_length
-            LOGGER.info("Tests execution ended. Statistics:\n%s"
-                        % result.suite.stat_message)
+                librarylogger.LOGGING_THREADS[0] = "MainThread"
+            LOGGER.info(
+                f"Tests execution ended. Statistics:\n{result.suite.stat_message}"
+            )
             if settings.log or settings.report or settings.xunit:
-                writer = ResultWriter(settings.output if settings.log
-                                      else result)
+                writer = ResultWriter(settings.output if settings.log else result)
                 writer.write_results(settings.get_rebot_settings())
         return result.return_code
 
@@ -460,8 +510,7 @@ class RobotFramework(Application):
         return self._filter_options_without_value(options), arguments
 
     def _filter_options_without_value(self, options):
-        return dict((name, value) for name, value in options.items()
-                    if value not in (None, []))
+        return {n: v for n, v in options.items() if v not in (None, [])}
 
 
 def run_cli(arguments=None, exit=True):
@@ -523,9 +572,10 @@ def run(*tests, **options):
     with Python ``None``. For example, using ``log=None`` is equivalent to
     ``--log NONE``.
 
-    ``listener``, ``prerunmodifier`` and ``prerebotmodifier`` options allow
-    passing values as Python objects in addition to module names these command
-    line options support. For example, ``run('tests', listener=MyListener())``.
+    ``listener``, ``prerunmodifier``, ``prerebotmodifier`` and ``console``
+    options allow passing values as Python objects in addition to module
+    names these command line options support. For example,
+    ``run('tests', listener=MyListener())``.
 
     To capture the standard output and error streams, pass an open file or
     file-like object as special keyword arguments ``stdout`` and ``stderr``,
@@ -554,5 +604,5 @@ def run(*tests, **options):
     return RobotFramework().execute(*tests, **options)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_cli(sys.argv[1:])

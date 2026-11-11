@@ -1,0 +1,274 @@
+*** Settings ***
+Suite Setup      Generate doc using Markdown source
+Test Template    Doc should contain
+Resource         libdoc_resource.robot
+
+*** Test Cases ***
+Basic formatting
+    Basic Markdown formatting such as <strong>bold</strong>, <em>italics</em> and <code>code</code> works as expected.
+
+Linking
+    Normal Markdown <a href="http://example.com">inline</a> and <a href="http://example.com" title="An &quot;example&quot;!">reference</a> links are supported.
+    ...    <a href="http://example.com">No title</a> is needed.
+    URLs like <a href="http://example.com">http://example.com</a> are automatically linkified as a custom feature.
+    ...    Surrounding URLs with angle brackets like <a href="http://example.com">http://example.com</a> works too.
+
+Automatic reference targets
+    Keywords like <a href="#References" title="&quot;References&quot; keyword">References</a> and <a href="#Admonitions" title="&quot;Admonitions&quot; keyword">admonitions</a>.
+    Headers in the library introduction like <a href="#linking" title="&quot;Linking&quot; section">linking</a>, <a href="#basics" title="&quot;Basics&quot; section">Basics</a>
+    ...    \ \ and <a href="#reference-w-special-chars" title="&quot;Reference w/ :special: &quot;chars&quot;?&quot; section">Reference w/ :special: "chars"?</a>.
+    Predefined targets like <a href="#Introduction" title="&quot;Introduction&quot; section">Introduction</a> and <a href="#Keywords" title="&quot;Keywords&quot; section">keywords</a>.
+    We can link to predefined targets like <a href="#Introduction" title="&quot;Introduction&quot; section">introduction</a>, to intro headers
+    ...    like <a href="#linking" title="&quot;Linking&quot; section">linking</a>, to keywords like <a href="#Admonitions" title="&quot;Admonitions&quot; keyword">Admonitions</a> and to types like <a href="#type-integer" title="&quot;integer&quot; type">int</a>
+    ...    and <a href="#type-list" title="&quot;list&quot; type">list</a>.
+    ...    model=${MODEL}[keywords][2]
+
+Custom references defined globally and locally work in keyword docs
+    Custom references defined in introduction like <a href="http://example.com" title="An &quot;example&quot;!">reference</a> and locally
+    ...    like <a href="http://robotframework.org">local</a> work too!
+    ...    model=${MODEL}[keywords][2]
+
+Links in argument docs
+    Arg with links to <a href="#Introduction" title="&quot;Introduction&quot; section">introduction</a> and <a href="#Admonitions" title="&quot;Admonitions&quot; keyword">Admonitions</a>.
+    ...    model=${MODEL}[keywords][2][args][0]
+    Arg with <a href="http://example.com" title="An &quot;example&quot;!">global</a> and <a href="http://robotframework.org">local</a> reference.
+    ...    model=${MODEL}[keywords][2][args][1]
+
+Links in return docs
+    Return with links to <a href="#Introduction" title="&quot;Introduction&quot; section">introduction</a> and <a href="#Admonitions" title="&quot;Admonitions&quot; keyword">Admonitions</a>
+    ...    and <a href="http://example.com" title="An &quot;example&quot;!">global</a> and <a href="http://robotframework.org">local</a> reference.
+    ...    model=${MODEL}[keywords][2][returnDoc]
+
+Links in exception docs
+    Error with links to <a href="#Introduction" title="&quot;Introduction&quot; section">introduction</a> and <a href="#Admonitions" title="&quot;Admonitions&quot; keyword">Admonitions</a>.
+    ...    model=${MODEL}[keywords][2][raises][E]
+    Error with <a href="http://example.com" title="An &quot;example&quot;!">global</a> and <a href="http://robotframework.org">local</a> reference.
+    ...    model=${MODEL}[keywords][2][raises][F]
+
+Local references do not work with other keywords
+    [local] references do not work with other keywords.
+    ...    model=${MODEL}[keywords][3]
+
+Unordered lists
+    <ul>\n<li>First unordered item.</li>\n<li>Second item.</li>\n</ul>
+    ...    model=${MODEL}[keywords][1]
+
+Ordered lists
+    <ol>\n<li>First ordered item.</li>\n<li>Second item.</li>\n</ol>
+    ...    model=${MODEL}[keywords][1]
+
+Nested lists
+    <ol>
+    ...    <li>First item in an ordered list.<ul>
+    ...    <li>Nested unordered item.</li>
+    ...    <li>Another nested item.</li>
+    ...    </ul>
+    ...    </li>
+    ...    <li>Second item.<ol>
+    ...    <li>Nested ordered item.</li>
+    ...    <li>Another nested item.</li>
+    ...    </ol>
+    ...    </li>
+    ...    </ol>
+    ...    model=${MODEL}[keywords][1]
+    <ul>
+    ...    <li>First item in an unordered list.<ul>
+    ...    <li>Nested unordered item.</li>
+    ...    <li>Another nested item.</li>
+    ...    </ul>
+    ...    </li>
+    ...    <li>Second item.<ol>
+    ...    <li>Nested ordered item.</li>
+    ...    <li>Another nested item.</li>
+    ...    </ol>
+    ...    </li>
+    ...    </ul>
+    ...    model=${MODEL}[keywords][1]
+
+Tables
+    <table>
+    ...    <thead>
+    ...    <tr>
+    ...    <th>Header 1</th>
+    ...    <th>Header 2</th>
+    ...    <th>Header 3</th>
+    ...    </tr>
+    ...    </thead>
+    ...    <tbody>
+    ...    <tr>
+    ...    <td>item 1.1</td>
+    ...    <td>item 2.1</td>
+    ...    <td>item 3.1</td>
+    ...    </tr>
+    ...    <tr>
+    ...    <td>item 1.2</td>
+    ...    <td>item 2.2</td>
+    ...    <td>item 3.2</td>
+    ...    </tr>
+    ...    </tbody>
+    ...    </table>
+    ...    model=${MODEL}[keywords][5]
+    <table>
+    ...    <thead>
+    ...    <tr>
+    ...    <th style="text-align: left;">Left</th>
+    ...    <th style="text-align: center;">Center</th>
+    ...    <th style="text-align: right;">Right</th>
+    ...    </tr>
+    ...    </thead>
+    ...    <tbody>
+    ...    <tr>
+    ...    <td style="text-align: left;">1234567890</td>
+    ...    <td style="text-align: center;">1234567890</td>
+    ...    <td style="text-align: right;">1234567890</td>
+    ...    </tr>
+    ...    </tbody>
+    ...    </table>
+    ...    model=${MODEL}[keywords][5]
+
+Syntax highlighting
+    <div class="code"><pre><span></span><code><span class="gh">*** Test Cases ***</span>
+    ...    <span class="gu">Example</span>
+    ...    <span class="p"> \ \ \ </span><span class="nf">Keyword</span><span class="p"> \ \ \ </span><span class="s">arg</span>
+    ...    </code></pre></div>
+    ...    model=${MODEL}[keywords][4]
+    <span class="c1"># This is comment in code, not a Markdown header!</span>
+    ...    model=${MODEL}[keywords][4]
+    <div class="code"><pre><span></span><code><span class="nb">print</span><span class="p">(</span><span class="s2">
+    ...    model=${MODEL}[keywords][4]
+
+Admonitions
+    <div class="admonition note">
+    ...    <p class="admonition-title">Note</p>
+    ...    <p>We have our own plugin that supports GFM style admonitions.</p>
+    ...    </div>
+    ...    model=${MODEL}[keywords][0]
+    <div class="admonition tip">
+    ...    <p class="admonition-title">Tip</p>
+    ...    <p>There are five supported admonition types:</p>
+    ...    <ul>
+    ...    <li>note</li>
+    ...    <li>tip</li>
+    ...    <li>important</li>
+    ...    <li>warning</li>
+    ...    <li>caution</li>
+    ...    </ul>
+    ...    </div>
+    ...    model=${MODEL}[keywords][0]
+    <div class="admonition important">
+    ...    <p class="admonition-title">Important</p>
+    ...    <p>Admonitions are not standard Markdown.</p>
+    ...    </div>
+    ...    model=${MODEL}[keywords][0]
+    <div class="admonition warning">
+    ...    <p class="admonition-title">Interoperability risk!</p>
+    ...    <p>We support optional titles, but GFM does not.</p>
+    ...    </div>
+    ...    model=${MODEL}[keywords][0]
+    <div class="admonition caution">
+    ...    <p class="admonition-title">Caution</p>
+    ...    <p>Just kidding, you are safe.</p>
+    ...    </div>
+    ...    model=${MODEL}[keywords][0]
+    <div class="admonition unrecognized">
+    ...    <p class="admonition-title">Unrecognized</p>
+    ...    <p>We treat unrecognized types the same as <code>note</code>.
+    ...    GFM does not support them at all.</p>
+    ...    </div>
+    ...    model=${MODEL}[keywords][0]
+    <div class="admonition note">
+    ...    <p class="admonition-title">Nesting</p>
+    ...    <p>We support nested admonitions!</p>
+    ...    <div class="admonition warning">
+    ...    <p class="admonition-title">Warning</p>
+    ...    <p>GFM does not.</p>
+    ...    </div>
+    ...    <p>Back in NOTE level.</p>
+    ...    </div>
+    ...    model=${MODEL}[keywords][0]
+
+Admonitions can contain tables and indented code blocks
+    <div class="admonition tip">
+    ...    <p class="admonition-title">Other content</p>
+    ...    <p>Tables work:</p>
+    ...    <table>
+    ...    <thead>
+    ...    <tr>
+    ...    <th>Kind</th>
+    ...    <th>Works</th>
+    ...    </tr>
+    ...    </thead>
+    ...    <tbody>
+    ...    <tr>
+    ...    <td>Tables</td>
+    ...    <td>yes</td>
+    ...    </tr>
+    ...    <tr>
+    ...    <td>Indented code blocks</td>
+    ...    <td>yes</td>
+    ...    </tr>
+    ...    </tbody>
+    ...    </table>
+    ...    <p>And so do indented code blocks:</p>
+    ...    <div class="code"><pre><span></span><code>*** Test Cases ***
+    ...    Example
+    ...    \ \ \ \ Keyword
+    ...    </code></pre></div>
+    ...    model=${MODEL}[keywords][0]
+
+Fenced code blocks do not work inside admonitions
+    [Documentation]    Python-Markdown's Fenced Code Block plugin only
+    ...                supports fenced code blocks at the document root level.
+    <p>Fenced code blocks do not, because Python-Markdown's Fenced Code Block
+    ...    plugin only supports them at the document root level:</p>
+    ...    <p><code>Not a code block!</code></p>
+    ...    </div>
+    ...    model=${MODEL}[keywords][0]
+
+Table of contents
+    <div class="toc">
+    ...    <ul>
+    ...    <li><a href="#basic-formatting">Basic formatting</a></li>
+    ...    <li><a href="#linking">Linking</a><ul>
+    ...    <li><a href="#link-syntax">Link syntax</a></li>
+    ...    <li><a href="#automatic-reference-targets">Automatic reference targets</a></li>
+    ...    <li><a href="#reference-w-special-chars">Reference w/ :special: "chars"?</a></li>
+    ...    </ul>
+    ...    </li>
+    ...    <li><a href="#advanced-syntax">Advanced syntax</a></li>
+    ...    <li><a href="#table-of-contents">Table of contents</a><ul>
+    ...    <li><a href="#basics">Basics</a></li>
+    ...    <li><a href="#included-header-levels">Included header levels</a></li>
+    ...    </ul>
+    ...    </li>
+    ...    </ul>
+    ...    </div>
+
+Lines starting with `#` in code blocks are not considered headers
+    <code># This is not a header!
+    ...    </code>
+    <code><span class="c1"># This is not a header either!</span>
+    ...    </code>
+
+Table of contents in keyword documentation
+    <div class="toc">
+    ...    <ul>
+    ...    <li><a href="#where-it-works">Where it works?</a></li>
+    ...    <li><a href="#where-to-learn-more">Where to learn more?</a></li>
+    ...    </ul>
+    ...    </div>
+    ...    model=${MODEL}[keywords][6]
+
+*** Keywords ***
+Generate doc using Markdown source
+    Run Libdoc And Parse Model From HTML    ${TESTDATADIR}/MarkdownFormat.py
+
+Doc should contain
+    [Arguments]    @{content}    ${model}=${MODEL}
+    VAR    ${content}    @{content}    separator=\n
+    IF    "doc" in $model
+        VAR    ${doc}    ${model}[doc]
+    ELSE
+        VAR    ${doc}    ${model}
+    END
+    Should Contain    ${doc}    ${content}

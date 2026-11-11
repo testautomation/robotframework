@@ -5,7 +5,7 @@ Resource          atest_resource.robot
 
 *** Test Cases ***
 Log Variables In Suite Setup
-    Set Test Variable    ${KW}    ${SUITE.setup.body[7]}
+    Set Test Variable    ${KW}    ${SUITE.setup[7]}
     Set Test Variable    ${INDEX}    ${0}
     Check Variable Message    \${/} = *    pattern=yes
     Check Variable Message    \${:} = ${:}
@@ -15,14 +15,16 @@ Log Variables In Suite Setup
     Check Variable Message    \${cli_var_3} = CLI3
     Check Variable Message    \${DEBUG_FILE} = NONE
     Check Variable Message    \&{DICT} = { key=value | two=2 }
+    Check Variable Message    \${ENDLESS} = repeat('RF')
     Check Variable Message    \${EXECDIR} = *    pattern=yes
     Check Variable Message    \${False} = *    pattern=yes
+    Check Variable Message    \${ITERABLE} = <generator object <genexpr> at 0x*>    pattern=yes
     Check Variable Message    \@{LIST} = [ Hello | world ]
     Check Variable Message    \${LOG_FILE} = NONE
     Check Variable Message    \${LOG_LEVEL} = INFO
     Check Variable Message    \${None} = None
     Check Variable Message    \${null} = None
-    Check Variable Message    \&{OPTIONS} = { include=[] | exclude=[] | skip=[] | skip_on_failure=[] }
+    Check Variable Message    \&{OPTIONS} = { rpa=False | include=[] | exclude=[] | skip=[] | skip_on_failure=[] | console_width=78 }
     Check Variable Message    \${OUTPUT_DIR} = *    pattern=yes
     Check Variable Message    \${OUTPUT_FILE} = *    pattern=yes
     Check Variable Message    \${PREV_TEST_MESSAGE} =
@@ -42,11 +44,11 @@ Log Variables In Suite Setup
     Check Variable Message    \${SUITE_SOURCE} = *    pattern=yes
     Check Variable Message    \${TEMPDIR} = *    pattern=yes
     Check Variable Message    \${True} = *    pattern=yes
-    Should Be Equal As Integers    ${kw.message_count}    35    Wrong total message count
+    Length Should Be    ${kw.messages}    37
 
 Log Variables In Test
     ${test} =    Check Test Case    Log Variables
-    Set Test Variable    ${KW}    ${test.body[0]}
+    Set Test Variable    ${KW}    ${test[0]}
     Set Test Variable    ${INDEX}    ${1}
     Check Variable Message    \${/} = *    pattern=yes
     Check Variable Message    \${:} = ${:}
@@ -56,14 +58,16 @@ Log Variables In Test
     Check Variable Message    \${cli_var_3} = CLI3
     Check Variable Message    \${DEBUG_FILE} = NONE
     Check Variable Message    \&{DICT} = { key=value | two=2 }
+    Check Variable Message    \${ENDLESS} = repeat('RF')
     Check Variable Message    \${EXECDIR} = *    pattern=yes
     Check Variable Message    \${False} = *    pattern=yes
+    Check Variable Message    \${ITERABLE} = <generator object <genexpr> at 0x*>    pattern=yes
     Check Variable Message    \@{LIST} = [ Hello | world ]
     Check Variable Message    \${LOG_FILE} = NONE
     Check Variable Message    \${LOG_LEVEL} = TRACE
     Check Variable Message    \${None} = None
     Check Variable Message    \${null} = None
-    Check Variable Message    \&{OPTIONS} = { include=[] | exclude=[] | skip=[] | skip_on_failure=[] }
+    Check Variable Message    \&{OPTIONS} = { rpa=False | include=[] | exclude=[] | skip=[] | skip_on_failure=[] | console_width=78 }
     Check Variable Message    \${OUTPUT_DIR} = *    pattern=yes
     Check Variable Message    \${OUTPUT_FILE} = *    pattern=yes
     Check Variable Message    \${PREV_TEST_MESSAGE} =
@@ -82,14 +86,15 @@ Log Variables In Test
     Check Variable Message    \${SUITE_SOURCE} = *    pattern=yes
     Check Variable Message    \${TEMPDIR} = *    pattern=yes
     Check Variable Message    \${TEST_DOCUMENTATION} =
+    Check Variable Message    \&{TEST_METADATA} = { }
     Check Variable Message    \${TEST_NAME} = Log Variables
     Check Variable Message    \@{TEST_TAGS} = [ ]
     Check Variable Message    \${True} = *    pattern=yes
-    Should Be Equal As Integers    ${kw.message_count}    39    Wrong total message count
+    Length Should Be    ${kw.messages}    42
 
 Log Variables After Setting New Variables
     ${test} =    Check Test Case    Log Variables
-    Set Test Variable    ${KW}    ${test.body[4]}
+    Set Test Variable    ${KW}    ${test[4]}
     Set Test Variable    ${INDEX}    ${1}
     Check Variable Message    \${/} = *    DEBUG    pattern=yes
     Check Variable Message    \${:} = ${:}    DEBUG
@@ -99,16 +104,18 @@ Log Variables After Setting New Variables
     Check Variable Message    \${cli_var_3} = CLI3    DEBUG
     Check Variable Message    \${DEBUG_FILE} = NONE    DEBUG
     Check Variable Message    \&{DICT} = { key=value | two=2 }    DEBUG
+    Check Variable Message    \${ENDLESS} = repeat('RF')    DEBUG
     Check Variable Message    \${EXECDIR} = *    DEBUG    pattern=yes
     Check Variable Message    \${False} = *    DEBUG    pattern=yes
     Check Variable Message    \@{int_list_1} = [ 0 | 1 | 2 | 3 ]    DEBUG
     Check Variable Message    \@{int_list_2} = [ 0 | 1 | 2 | 3 ]    DEBUG
+    Check Variable Message    \${ITERABLE} = <generator object <genexpr> at 0x*>    DEBUG    pattern=yes
     Check Variable Message    \@{LIST} = [ Hello | world ]    DEBUG
     Check Variable Message    \${LOG_FILE} = NONE    DEBUG
     Check Variable Message    \${LOG_LEVEL} = TRACE    DEBUG
     Check Variable Message    \${None} = None    DEBUG
     Check Variable Message    \${null} = None    DEBUG
-    Check Variable Message    \&{OPTIONS} = { include=[] | exclude=[] | skip=[] | skip_on_failure=[] }    DEBUG
+    Check Variable Message    \&{OPTIONS} = { rpa=False | include=[] | exclude=[] | skip=[] | skip_on_failure=[] | console_width=78 }    DEBUG
     Check Variable Message    \${OUTPUT_DIR} = *    DEBUG    pattern=yes
     Check Variable Message    \${OUTPUT_FILE} = *    DEBUG    pattern=yes
     Check Variable Message    \${PREV_TEST_MESSAGE} =    DEBUG
@@ -127,15 +134,16 @@ Log Variables After Setting New Variables
     Check Variable Message    \${SUITE_SOURCE} = *    DEBUG    pattern=yes
     Check Variable Message    \${TEMPDIR} = *    DEBUG    pattern=yes
     Check Variable Message    \${TEST_DOCUMENTATION} =    DEBUG
+    Check Variable Message    \&{TEST_METADATA} = { }    DEBUG
     Check Variable Message    \${TEST_NAME} = Log Variables    DEBUG
     Check Variable Message    \@{TEST_TAGS} = [ ]    DEBUG
     Check Variable Message    \${True} = *    DEBUG    pattern=yes
     Check Variable Message    \${var} = Hello    DEBUG
-    Should Be Equal As Integers    ${kw.message_count}    42    Wrong total message count
+    Length Should Be    ${kw.messages}    45
 
 Log Variables In User Keyword
     ${test} =    Check Test Case    Log Variables
-    Set Test Variable    ${KW}    ${test.body[5].body[2]}
+    Set Test Variable    ${KW}    ${test[5, 2]}
     Set Test Variable    ${INDEX}    ${1}
     Check Variable Message    \${/} = *    pattern=yes
     Check Variable Message    \${:} = ${:}
@@ -145,14 +153,16 @@ Log Variables In User Keyword
     Check Variable Message    \${cli_var_3} = CLI3
     Check Variable Message    \${DEBUG_FILE} = NONE
     Check Variable Message    \&{DICT} = { key=value | two=2 }
+    Check Variable Message    \${ENDLESS} = repeat('RF')
     Check Variable Message    \${EXECDIR} = *    pattern=yes
     Check Variable Message    \${False} = *    pattern=yes
+    Check Variable Message    \${ITERABLE} = <generator object <genexpr> at 0x*>    pattern=yes
     Check Variable Message    \@{LIST} = [ Hello | world ]
     Check Variable Message    \${LOG_FILE} = NONE
     Check Variable Message    \${LOG_LEVEL} = TRACE
     Check Variable Message    \${None} = None
     Check Variable Message    \${null} = None
-    Check Variable Message    \&{OPTIONS} = { include=[] | exclude=[] | skip=[] | skip_on_failure=[] }
+    Check Variable Message    \&{OPTIONS} = { rpa=False | include=[] | exclude=[] | skip=[] | skip_on_failure=[] | console_width=78 }
     Check Variable Message    \${OUTPUT_DIR} = *    pattern=yes
     Check Variable Message    \${OUTPUT_FILE} = *    pattern=yes
     Check Variable Message    \${PREV_TEST_MESSAGE} =
@@ -171,11 +181,12 @@ Log Variables In User Keyword
     Check Variable Message    \${SUITE_SOURCE} = *    pattern=yes
     Check Variable Message    \${TEMPDIR} = *    pattern=yes
     Check Variable Message    \${TEST_DOCUMENTATION} =
+    Check Variable Message    \&{TEST_METADATA} = { }
     Check Variable Message    \${TEST_NAME} = Log Variables
     Check Variable Message    \@{TEST_TAGS} = [ ]
     Check Variable Message    \${True} = *    pattern=yes
     Check Variable Message    \${ukvar} = Value of an uk variable
-    Should Be Equal As Integers    ${kw.message_count}    40    Wrong total message count
+    Length Should Be    ${kw.messages}    43
 
 List and dict variables failing during iteration
     Check Test Case    ${TEST NAME}
@@ -183,5 +194,5 @@ List and dict variables failing during iteration
 *** Keywords ***
 Check Variable Message
     [Arguments]    ${expected}    ${level}=INFO    ${pattern}=
-    Check Log Message    ${KW.msgs[${INDEX}]}    ${expected}    ${level}    pattern=${pattern}
+    Check Log Message    ${KW[${INDEX}]}    ${expected}    ${level}    pattern=${pattern}
     Set Test Variable    ${INDEX}    ${INDEX + 1}

@@ -15,11 +15,9 @@
 
 """Implements the `Libdoc` tool.
 
-The command line entry point and programmatic interface for Libdoc
-are provided by the separate :mod:`robot.libdoc` module.
-
-This package is considered stable but it is not part of the public API.
+The public Libdoc API is exposed via the :mod:`robot.libdoc` module.
 """
 
-from .builder import LibraryDocumentation
-from .consoleviewer import ConsoleViewer
+from .builder import LibraryDocumentation as LibraryDocumentation
+from .consoleviewer import ConsoleViewer as ConsoleViewer
+from .languages import format_languages as format_languages, LANGUAGES as LANGUAGES

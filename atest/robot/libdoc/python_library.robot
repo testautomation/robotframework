@@ -10,10 +10,10 @@ Documentation
     Doc Should Start With
     ...    A library providing communication over Telnet connections.
     ...
-    ...    ``Telnet`` is Robot Framework's standard library that makes it possible to
+    ...    Telnet is Robot Framework's standard library that makes it possible to
 
 Version
-    Version Should Match             [345].*
+    Version Should Match             [6789].*
 
 Type
     Type Should Be                   LIBRARY
@@ -26,15 +26,17 @@ Scope
 
 Source info
     Source should be                 ${CURDIR}/../../../src/robot/libraries/Telnet.py
-    Lineno should be                 36
+    Lineno should be                 37
 
 Spec version
     Spec version should be correct
 
 Init Documentation
     Init Doc Should Start With       0
-    ...    Telnet library can be imported with optional configuration parameters.\n\n
-    ...    Configuration parameters are used as default values when new\nconnections are
+    ...    Telnet library can be imported with optional configuration parameters.
+    ...
+    ...    Configuration parameters are used as default values when new connections
+    ...    are opened with the [Open Connection] keyword.
 
 Init Arguments
     Init Arguments Should Be         0    timeout=3 seconds    newline=CRLF
@@ -45,7 +47,7 @@ Init Arguments
 
 Init Source Info
     Keyword Should Not Have Source   0    xpath=inits/init
-    Keyword Lineno Should Be         0    281      xpath=inits/init
+    Keyword Lineno Should Be         0    298      xpath=inits/init
 
 Keyword Names
     Keyword Name Should Be           0    Close All Connections
@@ -53,66 +55,61 @@ Keyword Names
 
 Keyword Arguments
     Keyword Arguments Should Be      0
-    Keyword Arguments Should Be      1     loglevel=None
+    Keyword Arguments Should Be      1    loglevel=None
 
 Keyword Documentation
-    Keyword Doc Should Start With    0   Closes all open connections
+    Keyword Doc Should Start With    0    Closes all open connections
     Keyword Doc Should Start With    2
-    ...    Executes the given ``command`` and reads, logs, and returns everything until the prompt.
+    ...    Executes the given `command` and reads, logs, and returns resulting output.
     ...
-    ...    This keyword requires the prompt to be [#Configuration|configured]
-    ...    either in `importing` or with `Open Connection` or `Set Prompt` keyword.
-    ...
-    ...    This is a convenience keyword that uses `Write` and `Read Until Prompt`
-    ...    internally. Following two examples are thus functionally identical:\
-    ...
-    ...    | \${out} = | `Execute Command`${SPACE*3}| pwd |
-    ...
-    ...    | `Write`${SPACE*2}| pwd${SPACE*17}|
-    ...    | \${out} = | `Read Until Prompt` |
-    ...
+    ...    This is a convenience keyword that uses [Write] and [Read Until Prompt]
+    ...    internally. Following two examples are thus functionally identical:
 
 Keyword Source Info
     # This keyword is from the "main library".
     Keyword Name Should Be           0    Close All Connections
     Keyword Should Not Have Source   0
-    Keyword Lineno Should Be         0    470
+    Keyword Lineno Should Be         0    575
     # This keyword is from an external library component.
     Keyword Name Should Be           7    Read Until Prompt
     Keyword Should Not Have Source   7
-    Keyword Lineno Should Be         7    1009
+    Keyword Lineno Should Be         7    1262
 
 KwArgs and VarArgs
-    Run Libdoc And Parse Output      Process
-    Keyword Name Should Be           7    Run Process
-    Keyword Arguments Should Be      7    command    *arguments    **configuration
+    Run Libdoc And Parse Output      ${TESTDATADIR}/KwArgs.py
+    Keyword Arguments Should Be      2    *varargs    **kwargs
+    Keyword Arguments Should Be      3    a    /    b    c=d    *e    f    g=h    **i
 
 Keyword-only Arguments
-    Run Libdoc And Parse Output      ${TESTDATADIR}/KeywordOnlyArgs.py
+    Run Libdoc And Parse Output      ${TESTDATADIR}/KwArgs.py
     Keyword Arguments Should Be      0    *    kwo
     Keyword Arguments Should Be      1    *varargs    kwo    another=default
 
 Positional-only Arguments
-    [Tags]    require-py3.8
     Run Libdoc And Parse Output      ${DATADIR}/keywords/PositionalOnly.py
-    Keyword Arguments Should Be      2    arg    /
+    Keyword Arguments Should Be      1    arg    /
     Keyword Arguments Should Be      5    posonly    /    normal
     Keyword Arguments Should Be      0    required    optional=default    /
-    Keyword Arguments Should Be      4    first: int    second: float    /
+    Keyword Arguments Should Be      3    first: int    second: float    /
 
 Decorators
     Run Libdoc And Parse Output      ${TESTDATADIR}/Decorators.py
     Keyword Name Should Be           0    Keyword Using Decorator
     Keyword Arguments Should Be      0    *args    **kwargs
     Keyword Should Not Have Source   0
-    Keyword Lineno Should Be         0    8
+    Keyword Lineno Should Be         0    7
     Keyword Name Should Be           1    Keyword Using Decorator With Wraps
     Keyword Arguments Should Be      1    args    are    preserved=True
-    Keyword Lineno Should Be         1    26
+    Keyword Lineno Should Be         1    27
 
 Documentation set in __init__
     Run Libdoc And Parse Output      ${TESTDATADIR}/DocSetInInit.py
     Doc Should Be                    Doc set in __init__!!
+
+__init__ with only named-only arguments
+    Run Libdoc And Parse Output      ${TESTDATADIR}/InitWithOnlyNamedOnlyArgs.py::b=2
+    Init Arguments Should Be         0    *    a=1    b
+    Init Doc Should Be               0    xxx
 
 Deprecation
     Run Libdoc And Parse Output          ${TESTDATADIR}/Deprecation.py
@@ -130,3 +127,8 @@ Deprecation
     ...
     ...                                       RF and Libdoc don't consider this being deprecated.
     Keyword Should Not Be Deprecated     3
+
+NOT_SET as default value
+    Run Libdoc And Parse Output      Collections
+    Keyword Name Should Be           17    Get From Dictionary
+    Keyword Arguments Should Be      17    dictionary: Mapping    key: object    default: object = \

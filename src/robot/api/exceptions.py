@@ -29,18 +29,20 @@ class Failure(AssertionError):
     the standard ``AssertionError``. The main benefits are HTML support and that
     the name of this exception is consistent with other exceptions in this module.
     """
+
     ROBOT_SUPPRESS_NAME = True
 
-    def __init__(self, message, html=False):
+    def __init__(self, message: str, html: bool = False):
         """
         :param message: Exception message.
         :param html: When ``True``, message is considered to be HTML and not escaped.
         """
-        AssertionError.__init__(self, message if not html else '*HTML* ' + message)
+        super().__init__(message if not html else "*HTML* " + message)
 
 
 class ContinuableFailure(Failure):
     """Report failed validation but allow continuing execution."""
+
     ROBOT_CONTINUE_ON_FAILURE = True
 
 
@@ -55,30 +57,33 @@ class Error(RuntimeError):
     the standard ``RuntimeError``. The main benefits are HTML support and that
     the name of this exception is consistent with other exceptions in this module.
     """
+
     ROBOT_SUPPRESS_NAME = True
 
-    def __init__(self, message, html=False):
+    def __init__(self, message: str, html: bool = False):
         """
         :param message: Exception message.
         :param html: When ``True``, message is considered to be HTML and not escaped.
         """
-        RuntimeError.__init__(self, message if not html else '*HTML* ' + message)
+        super().__init__(message if not html else "*HTML* " + message)
 
 
 class FatalError(Error):
     """Report error that stops the whole execution."""
+
     ROBOT_EXIT_ON_FAILURE = True
     ROBOT_SUPPRESS_NAME = False
 
 
 class SkipExecution(Exception):
     """Mark the executed test or task skipped."""
+
     ROBOT_SKIP_EXECUTION = True
     ROBOT_SUPPRESS_NAME = True
 
-    def __init__(self, message, html=False):
+    def __init__(self, message: str, html: bool = False):
         """
         :param message: Exception message.
         :param html: When ``True``, message is considered to be HTML and not escaped.
         """
-        Exception.__init__(self, message if not html else '*HTML* ' + message)
+        super().__init__(message if not html else "*HTML* " + message)

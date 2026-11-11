@@ -21,22 +21,16 @@ Send other well-known signals
         Killer signal    ${signal}
     END
 
-By default signal is not sent to process running in shell
-    Check Precondition    sys.platform == 'linux'
-    Start Countdown    shell=yes
-    Send Signal To Process    TERM
-    Countdown should not have stopped
-
 By default signal is sent only to parent process
     Start Countdown    children=3
     Send Signal To Process    SIGTERM
     Countdown should not have stopped
 
-Signal can be sent to process running in shell
-    Killer signal    TERM    shell=True    group=yes
-
 Signal can be sent to child processes
     Killer signal    TERM    children=3    group=${True}
+
+Signal can be sent to process running in shell
+    Killer signal    TERM    shell=True    group=yes
 
 Sending an unknown signal
     [Documentation]    FAIL Unsupported signal 'unknown'.
@@ -58,7 +52,7 @@ Sending signal to a process with a wrong handle
 *** Keywords ***
 Killer signal
     [Arguments]    ${signal}    ${shell}=False    ${children}=0    ${group}=False
-    Start Countdown    alias=${signal}    shell=${shell}    children=${children}
+    Start Countdown    alias=${{str($signal)}}    shell=${shell}    children=${children}
     Send Signal To Process    ${signal}    group=${group}
     Countdown Should Have Stopped    handle=${signal}
 
@@ -67,4 +61,4 @@ Start Countdown
     ${handle} =    Start Process    python    ${COUNTDOWN}    ${TEMPFILE}
     ...    ${children}    alias=${alias}    shell=${shell}
     Wait Until Countdown Started
-    [Return]    ${handle}
+    RETURN    ${handle}

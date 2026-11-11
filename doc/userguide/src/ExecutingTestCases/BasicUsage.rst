@@ -48,8 +48,8 @@ and they are executed by giving the path to the file or directory in
 question to the selected runner script. The path can be absolute or,
 more commonly, relative to the directory where tests are executed
 from. The given file or directory creates the top-level test suite,
-which gets its name, unless overridden with the :option:`--name` option__,
-from the `file or directory name`__. Different execution possibilities
+which, by default, gets its name from the `file or directory name`__.
+Different execution possibilities
 are illustrated in the examples below. Note that in these examples, as
 well as in other examples in this section, only the ``robot`` script
 is used, but other execution approaches could be used similarly.
@@ -70,7 +70,7 @@ directories at once, separated with spaces. In this case, Robot
 Framework creates the top-level test suite automatically, and
 the specified files and directories become its child test suites. The name
 of the created test suite is got from child suite names by
-catenating them together with an ampersand (&) and spaces. For example,
+concatenating them together with an ampersand (&) and spaces. For example,
 the name of the top-level suite in the first example below is
 :name:`My Tests & Your Tests`. These automatically created names are
 often quite long and complicated. In most cases, it is thus better to
@@ -80,11 +80,18 @@ example below::
    robot my_tests.robot your_tests.robot
    robot --name Example path/to/tests/pattern_*.robot
 
-__ `Test case files`_
-__ `Test suite directories`_
-__ `Setting the name`_
-__ `Test suite name and documentation`_
-__ `Test suite directories`_
+Starting from Robot Framework 6.1, it is also possible to define a
+`test suite initialisation file`__ for the automatically created top-level
+suite. The path to the init file is given similarly to the
+test case files::
+
+    robot __init__.robot my_tests.robot other_tests.robot
+
+__ `Suite files`_
+__ `Suite directories`_
+__ `Suite name`_
+__ `Suite directories`_
+__ `Suite initialization files`_
 
 Using command line options
 --------------------------
@@ -117,9 +124,12 @@ and shortened options are practical when executing test cases
 manually, but long options are recommended in `start-up scripts`_,
 because they are easier to understand.
 
-The long option format is case-insensitive, which facilitates writing option
-names in an easy-to-read format. For example, :option:`--SuiteStatLevel`
-is equivalent to, but easier to read than :option:`--suitestatlevel`.
+The long option names are case-insensitive and hyphen-insensitive,
+which facilitates writing option names in an easy-to-read format.
+For example, :option:`--SuiteStatLevel` and :option:`--suite-stat-level`
+are equivalent to, but easier to read than, :option:`--suitestatlevel`.
+
+.. note:: Long options being hyphen-insensitive is new in Robot Framework 6.1.
 
 Setting option values
 ~~~~~~~~~~~~~~~~~~~~~
@@ -182,58 +192,61 @@ be escaped.
 .. note:: Support for brackets like `[abc]` and `[!a-z]` is new in
           Robot Framework 3.1.
 
-__ http://en.wikipedia.org/wiki/Glob_(programming)
+__ https://en.wikipedia.org/wiki/Glob_(programming)
 
 Tag patterns
 ~~~~~~~~~~~~
 
 Most tag related options accept arguments as *tag patterns*. They support same
-wildcards as `simple patterns`_ (e.g. `examp??`, `ex*le`), but they also support `AND`,
-`OR` and `NOT` operators explained below. These operators can be
-used for combining two or more individual tags or patterns together.
+wildcards as `simple patterns`_ (e.g. `examp??`, `ex*le`), but they also support
+Boolean operators `AND`, `OR` and `NOT` (case-sensitive) that can be used for
+combining two or more individual tags or patterns together.
 
-`AND` or `&`
-   The whole pattern matches if all individual patterns match. `AND` and
-   `&` are equivalent::
+To avoid ambiguity with tags containing `AND`, `OR` or `NOT`, tags used in patterns
+should be given in lower case like `port OR handover`. Because matching tags is
+case-insensitive, this works even if tags themselves would be upper case like `PORT`.
+
+`AND`
+   The whole pattern matches if all individual patterns match::
 
       --include fooANDbar     # Matches tests containing tags 'foo' and 'bar'.
-      --exclude xx&yy&zz      # Matches tests containing tags 'xx', 'yy', and 'zz'.
+      --exclude xANDyANDz     # Matches tests containing tags 'x', 'y', and 'z'.
 
 `OR`
    The whole pattern matches if any individual pattern matches::
 
       --include fooORbar      # Matches tests containing either tag 'foo' or tag 'bar'.
-      --exclude xxORyyORzz    # Matches tests containing any of tags 'xx', 'yy', or 'zz'.
+      --exclude xORyORz       # Matches tests containing any of tags 'x', 'y', or 'z'.
 
 `NOT`
-   The whole pattern matches if the pattern on the left side matches but
-   the one on the right side does not. If used multiple times, none of
-   the patterns after the first `NOT` must not match::
+   The whole pattern matches if the pattern on the left side of `NOT` matches,
+   but the pattern on the right side does not. If used multiple times, none of
+   the patterns after the first `NOT` can match::
 
       --include fooNOTbar     # Matches tests containing tag 'foo' but not tag 'bar'.
-      --exclude xxNOTyyNOTzz  # Matches tests containing tag 'xx' but not tag 'yy' or tag 'zz'.
+      --exclude xNOTyNOTz     # Matches tests containing tag 'x' but not tag 'y' or tag 'z'.
 
-   The pattern can also start with `NOT`
-   in which case the pattern matches if the pattern after `NOT` does not match::
+   The pattern can also start with `NOT`. In that case the pattern matches
+   if the pattern after `NOT` does not match::
 
-      --include NOTfoo        # Matches tests not containing tag 'foo'
-      --include NOTfooANDbar  # Matches tests not containing tags 'foo' and 'bar'
+      --include NOTfoo        # Matches tests not containing tag 'foo'.
+      --include NOTxANDy      # Matches tests not containing tags 'x' and 'y'.
 
 The above operators can also be used together. The operator precedence,
 from highest to lowest, is `AND`, `OR` and `NOT`::
 
-    --include xANDyORz      # Matches tests containing either tags 'x' and 'y', or tag 'z'.
-    --include xORyNOTz      # Matches tests containing either tag 'x' or 'y', but not tag 'z'.
-    --include xNOTyANDz     # Matches tests containing tag 'x', but not tags 'y' and 'z'.
+    --include xANDyORz        # Matches tests containing either tags 'x' and 'y', or tag 'z'.
+    --include xORyNOTz        # Matches tests containing either tag 'x' or 'y', but not tag 'z'.
+    --include xNOTyANDz       # Matches tests containing tag 'x', but not tags 'y' and 'z'.
 
-Although tag matching itself is case-insensitive, all operators are
-case-sensitive and must be written with upper case letters. If tags themselves
-happen to contain upper case `AND`, `OR` or `NOT`, they need to specified
-using lower case letters to avoid accidental operator usage::
+.. note:: Starting from Robot Framework 8.0, operators need to be separated from
+          tags with spaces like `X OR Y` or tags must be used in lower case like
+          `xORy`. Using patterns like `XORY` still works with Robot Framework 7.5,
+          but such usages are deprecated.
 
-    --include port          # Matches tests containing tag 'port', case-insensitively
-    --include PORT          # Matches tests containing tag 'P' or 'T', case-insensitively
-    --exclude handoverORportNOTnotification
+.. note:: Older Robot Framework versions support `&` operator as an alias for `AND`.
+          This was deprecated in Robot Framework 7.5 and the support will be removed
+          in Robot Framework 8.0.
 
 ``ROBOT_OPTIONS`` and ``REBOT_OPTIONS`` environment variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -250,7 +263,7 @@ avoid the need to repeat them every time tests are run or Rebot used.
 
    export ROBOT_OPTIONS="--outputdir results --tagdoc 'mytag:Example doc with spaces'"
    robot tests.robot
-   export REBOT_OPTIONS="--reportbackground green:yellow:red"
+   export REBOT_OPTIONS="--reportbackground blue:red:yellow"
    rebot --name example output.xml
 
 __ `Post-processing outputs`_
@@ -287,21 +300,21 @@ a keyword passes and a red F if it fails. These markers are written to the end
 of line and they are overwritten by the test status when the test itself ends.
 Writing the markers is disabled if console output is redirected to a file.
 
-Generated output files
+Generated result files
 ~~~~~~~~~~~~~~~~~~~~~~
 
-The command line output is very limited, and separate output files are
-normally needed for investigating the test results. As the example
-above shows, three output files are generated by default. The first
-one is in XML format and contains all the information about test
-execution. The second is a higher-level report and the third is a more
-detailed log file. These files and other possible output files are
-discussed in more detail in the section `Different output files`_.
+The command line output is very limited, and separate `result files`_ are
+normally needed for investigating results further. As the example
+above shows, three result files are generated by default. The first
+one is in XML format and contains all the information about execution in
+machine readable format. The second is a higher-level report and the third
+is a more detailed log file. These files and other possible result files are
+discussed in more detail in the `Execution artifacts`_ section.
 
 Return codes
 ~~~~~~~~~~~~
 
-Runner scripts communicate the overall test execution status to the
+Runner scripts communicate the overall execution status to the
 system running them using return codes. When the execution starts
 successfully and no tests fail, the return code is zero.
 All possible return codes are explained in the table below.
@@ -316,24 +329,27 @@ All possible return codes are explained in the table below.
    1-249     Returned number of tests failed.
    250       250 or more failures.
    251       Help or version information printed.
-   252       Invalid test data or command line options.
-   253       Test execution stopped by user.
+   252       Invalid data or command line option.
+   253       Execution stopped by user.
    255       Unexpected internal error.
    ========  ==========================================
 
 Return codes should always be easily available after the execution,
 which makes it easy to automatically determine the overall execution
-status. For example, in bash shell the return code is in special
-variable `$?`, and in Windows it is in `%ERRORLEVEL%`
+status. For example, in the Bash shell the return code is in the
+`$?` variable, and in Windows it is in the `%ERRORLEVEL%`
 variable. If you use some external tool for running tests, consult its
 documentation for how to get the return code.
 
-The return code can be set to 0 even if there are failures using
-the :option:`--NoStatusRC` command line option. This might be useful, for
+The return code can be set to zero regardless the execution status by using
+the :option:`--nostatusrc` command line option. This might be useful, for
 example, in continuous integration servers where post-processing of results
-is needed before the overall status of test execution can be determined.
+is needed before the overall status of execution can be determined.
 
 .. note:: Same return codes are also used with Rebot_.
+
+.. note:: When `getting help and version information`_, the :option:`--nostatusrc`
+          option has an effect only with Robot Framework 7.4 and newer.
 
 Errors and warnings during execution
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -385,16 +401,16 @@ __ `Short and long options`_
 Argument file syntax
 ~~~~~~~~~~~~~~~~~~~~
 
-Argument files can contain both command line options and paths to the test data,
-one option or data source per line. Both short and long options are supported,
-but the latter are recommended because they are easier to understand.
+Argument files can contain both command line options and paths to the executed data,
+one option or a data source per line. Both short and long options are supported,
+but the latter are recommended in this context because they are easier to understand.
 Argument files can contain any characters without escaping, but spaces in
 the beginning and end of lines are ignored. Additionally, empty lines and
-lines starting with a hash mark (#) are ignored::
+lines starting with a hash mark (`#`) are ignored::
 
    --doc This is an example (where "special characters" are ok!)
    --metadata X:Value with spaces
-   --variable VAR:Hello, world!
+   --variable NAME:Hello, world!
    # This is a comment
    path/to/my/tests
 
@@ -408,7 +424,43 @@ identical::
     --name       An Example
 
 If argument files contain non-ASCII characters, they must be saved using
-UTF-8 encoding.
+the UTF-8 encoding. Argument files can use any extension. Typically :file:`.txt`
+works fine, but a custom extension like :file:`.args` can be used to separate
+argument files from normal text files.
+
+Expanding environment variables
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Starting from Robot Framework 7.4, it is possible to use environment variables
+in argument files and get them replaced *before* files are processed otherwise.
+For backwards compatibility reasons, this functionality is not enabled by default,
+but it is easy to opt-in by starting an argument file with a line `# expandvars: true`.
+The functionality may be enabled by default in the future, and it is possible
+to opt-out already now by using `# expandvars: false`.
+
+Environment variables can be used in format `$NAME` and `${NAME}`. In addition to
+that, default values are supported like `${NAME=default}`. If a literal dollar sign
+is needed, it can be escaped by doubling it like `$$not_var`::
+
+    # expandvars: true
+    --name $NAME
+    --doc ${NAME}v${VERSION}
+    --metadata Default:${META=default value}
+    --metadata Escape:$$100
+
+Environment variables are not limited to option values. They can also contain
+option names, both names and values, and using the comment character even enables
+conditional options::
+
+    # expandvars: true
+    --${NAME} ${VALUE}
+    ${NAME_AND_VALUE}
+    ${COND1=}  --metadata COND1:This is enabled by default. Set 'COND1' to '#' to disable.
+    ${COND2=#} --metadata COND2:This is disabled by default. Set 'COND2' to '' to enable.
+
+Environment variable names are case-sensitive, limited to ASCII letters, numbers
+and underscores, and they cannot start with a number. Using a non-existing variable
+or an invalid variable name causes an error.
 
 Using argument files
 ~~~~~~~~~~~~~~~~~~~~
@@ -421,9 +473,8 @@ option was. This means that options in argument files can override options
 before it, and its options can be overridden by options after it. It is possible
 to use :option:`--argumentfile` option multiple times or even recursively::
 
-   robot --argumentfile all_arguments.robot
-   robot --name Example --argumentfile other_options_and_paths.robot
-   robot --argumentfile default_options.txt --name Example my_tests.robot
+   robot --argumentfile all_options_and_arguments.txt
+   robot --argumentfile defaults.args --name Example tests.robot
    robot -A first.txt -A second.txt -A third.txt tests.robot
 
 Reading argument files from standard input
@@ -439,20 +490,25 @@ arguments with a script::
 Getting help and version information
 ------------------------------------
 
-Both when executing test cases and when post-processing outputs, it is possible
+Both when executing tests and when post-processing outputs, it is possible
 to get command line help with the option :option:`--help (-h)`.
-These help texts have a short general overview and
-briefly explain the available command line options.
+This help text provides version information, a short general introduction
+and explanation of the available command line options.
 
-All runner scripts also support getting the version information with
+It is also possible to get just the version information with
 the option :option:`--version`. This information also contains Python
 version and the platform type::
 
    $ robot --version
-   Robot Framework 5.0 (Python 3.8.12 on darwin)
+   Robot Framework 7.4 (Python 3.14.0 on linux)
 
    C:\>rebot --version
-   Rebot 5.0 (Python 3.7.0 on win32)
+   Rebot 7.3.1 (Python 3.13.7 on win32)
+
+When help or version information is printed to the console, the execution
+exits with a special `return code`_ 251 by default. Starting from Robot
+Framework 7.4, the return code can be changed to zero by using the
+:option:`--nostatusrc` option like `robot --version --nostatusrc`.
 
 .. _start-up script:
 .. _start-up scripts:
@@ -619,7 +675,7 @@ idea to enable the syslog_ and see what information it provides. It is
 also possible to add some keywords to the test cases to see what is
 going on. Especially BuiltIn_ keywords :name:`Log` and :name:`Log
 Variables` are useful. If nothing else works, it is always possible to
-search help from `mailing lists`_ or elsewhere.
+ask help on `support forums`_.
 
 __ `Communicating with Robot Framework`_
 
@@ -650,4 +706,4 @@ from within a python library or alternatively:
 
 can be used directly in a test case.
 
-__ http://docs.python.org/library/pdb.html
+__ https://docs.python.org/library/pdb.html

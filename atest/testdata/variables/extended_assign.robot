@@ -1,5 +1,9 @@
 *** Settings ***
 Variables    extended_assign_vars.py
+Library      Collections
+
+*** Variables ***
+&{DICT}      key=value
 
 *** Test Cases ***
 Set attributes to Python object
@@ -19,8 +23,40 @@ Set nested attribute when parent uses item access
     ${body.data[0].name} =    Set Variable    new value
     Should Be Equal    ${body.data[0].name}    new value
 
+Set item to list attribute
+    &{body} =                Evaluate        {'data': [0, 1, 2, 3]}
+    ${body.data}[${0}] =     Set Variable    firstVal
+    ${body.data}[-1] =       Set Variable    lastVal
+    ${body.data}[1:3] =      Create List     ${98}        middle    ${99}
+    Lists Should Be Equal    ${body.data}    ${{['firstVal', 98, 'middle', 99, 'lastVal']}}
+
+Set item to dict attribute
+    &{body} =                        Evaluate              {'data': {'key': 'val', 0: 1}}
+    ${body.data}[key] =              Set Variable          newVal
+    ${body.data}[${0}] =             Set Variable          ${2}
+    ${body.data}[newKey] =           Set Variable          newKeyVal
+    Dictionaries Should Be Equal     ${body.data}          ${{{'key': 'newVal', 0: 2, 'newKey': 'newKeyVal'}}}
+
+Set using @-syntax
+    [Documentation]    FAIL Setting '\@{VAR.fail}' failed: Expected list-like value, got string.
+    @{DICT.key} =    Create List    1    2    3
+    Should Be Equal    ${DICT}    ${{{'key': ['1', '2', '3']}}}
+    @{VAR.list: int} =    Create List    1    2    3
+    Should Be Equal    ${VAR.list}    ${{[1, 2, 3]}}
+    @{VAR.fail} =    Set Variable    not a list
+
+Set using &-syntax
+    [Documentation]    FAIL Setting '\&{DICT.fail}' failed: Expected dictionary-like value, got integer.
+    &{VAR.dict} =    Create Dictionary    key=value
+    Should Be Equal    ${VAR.dict}    ${{{'key': 'value'}}}
+    Should Be Equal    ${VAR.dict.key}    value
+    &{DICT.key: int=float} =    Create Dictionary    1=2.3    ${4.0}=${5.6}
+    Should Be Equal    ${DICT}    ${{{'key': {1: 2.3, 4: 5.6}}}}
+    Should Be Equal    ${DICT.key}[${1}]    ${2.3}
+    &{DICT.fail} =    Set Variable    ${666}
+
 Trying to set un-settable attribute
-    [Documentation]    FAIL STARTS: Setting attribute 'not_settable' to variable '\${VAR}' failed: AttributeError:
+    [Documentation]    FAIL STARTS: Setting '\${VAR.not_settable}' failed: AttributeError:
     ${VAR.not_settable} =    Set Variable    whatever
 
 Un-settable attribute error is catchable
@@ -28,11 +64,11 @@ Un-settable attribute error is catchable
     ...    Teardown failed:
     ...    Several failures occurred:
     ...
-    ...    1) Setting attribute 'not_settable' to variable '\${VAR}' failed: AttributeError: *
+    ...    1) Setting '\${VAR.not_settable}' failed: AttributeError: *
     ...
     ...    2) AssertionError
     Run Keyword And Expect Error
-    ...    Setting attribute 'not_settable' to variable '\${VAR}' failed: AttributeError: *
+    ...    Setting '\${VAR.not_settable}' failed: AttributeError: *
     ...    Setting unsettable attribute
     [Teardown]    Run Keywords    Setting unsettable attribute    Fail
 
@@ -60,11 +96,6 @@ Attribute name must be valid
     Should Be Equal    ${VAR.}    empty
     Should Be Equal    ${VAR.2nd}    starts with number
     Should Be Equal    ${VAR.foo-bar}    invalid char
-
-Extended syntax is ignored with list variables
-    @{list} =    Create List    1    2    3
-    @{list.new} =    Create List    1    2    3
-    Should Be Equal    ${list}    ${list.new}
 
 *** Keywords ***
 Extended assignment is disabled

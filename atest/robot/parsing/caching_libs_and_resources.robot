@@ -11,23 +11,23 @@ Import Libraries Only Once
     Should Contain X Times    ${SYSLOG}    Found library 'BuiltIn' with arguments [ ] from cache.    2
     Should Contain X Times    ${SYSLOG}    Imported library 'OperatingSystem' with arguments [ ] (version    1
     Should Contain X Times    ${SYSLOG}    Found library 'OperatingSystem' with arguments [ ] from cache.    3
-    Syslog Should Contain    | INFO \ |    Library 'OperatingSystem' already imported by suite 'Library Caching.File1'.
-    Syslog Should Contain    | INFO \ |    Library 'OperatingSystem' already imported by suite 'Library Caching.File2'.
+    Syslog Should Contain    | INFO \ |    Suite 'Library Caching.File1' has already imported library 'OperatingSystem' with same arguments. This import is ignored.
+    Syslog Should Contain    | INFO \ |    Suite 'Library Caching.File2' has already imported library 'OperatingSystem' with same arguments. This import is ignored.
 
 Process Resource Files Only Once
     [Setup]    Run Tests And Set $SYSLOG    parsing/resource_parsing
     # Check that tests are run ok
     ${tc} =    Check Test Case    Test 1.1
-    Check Log Message    ${tc.kws[0].kws[0].msgs[0]}    variable value from 02 resource
-    Check Log Message    ${tc.kws[1].msgs[0]}    variable value from 02 resource
+    Check Log Message    ${tc[0, 0, 0]}    variable value from 02 resource
+    Check Log Message    ${tc[1, 0]}    variable value from 02 resource
     ${tc} =    Check Test Case    Test 4.1
-    Check Log Message    ${tc.kws[0].kws[0].msgs[0]}    variable value from 02 resource
-    Check Log Message    ${tc.kws[1].msgs[0]}    variable value from 02 resource
+    Check Log Message    ${tc[0, 0, 0]}    variable value from 02 resource
+    Check Log Message    ${tc[1, 0]}    variable value from 02 resource
     ${tc} =    Check Test Case    Test 4.2
-    Check Log Message    ${tc.kws[0].kws[0].msgs[0]}    variable value from 03 resource
-    Check Log Message    ${tc.kws[0].kws[1].msgs[0]}    variable value from 02 resource
-    Check Log Message    ${tc.kws[0].kws[2].kws[0].msgs[0]}    variable value from 02 resource
-    Check Log Message    ${tc.kws[1].msgs[0]}    variable value from 03 resource
+    Check Log Message    ${tc[0, 0, 0]}    variable value from 03 resource
+    Check Log Message    ${tc[0, 1, 0]}    variable value from 02 resource
+    Check Log Message    ${tc[0, 2, 0, 0]}    variable value from 02 resource
+    Check Log Message    ${tc[1, 0]}    variable value from 03 resource
     ${dir} =    Normalize Path    ${DATADIR}/parsing/resource_parsing
     Should Contain X Times    ${SYSLOG}    Parsing file '${dir}${/}02_resource.robot'             1
     Should Contain X Times    ${SYSLOG}    Parsing resource file '${dir}${/}02_resource.robot'    1

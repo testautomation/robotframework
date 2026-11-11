@@ -15,20 +15,41 @@
 
 """Implements the core test execution logic.
 
-The main public entry points of this package are of the following two classes:
-
-* :class:`~robot.running.builder.builders.TestSuiteBuilder` for creating
-  executable test suites based on existing test case files and directories.
+The public API of this module consists of the following objects:
 
 * :class:`~robot.running.model.TestSuite` for creating an executable
   test suite structure programmatically.
 
-It is recommended to import both of these classes via the :mod:`robot.api`
-package like in the examples below. Also :class:`~robot.running.model.TestCase`
-and :class:`~robot.running.model.Keyword` classes used internally by the
-:class:`~robot.running.model.TestSuite` class are part of the public API.
-In those rare cases where these classes are needed directly, they can be
-imported from this package.
+* :class:`~robot.running.builder.builders.TestSuiteBuilder` for creating
+  executable test suites based on data on a file system.
+  Instead of using this class directly, it is possible to use the
+  :meth:`TestSuite.from_file_system <robot.running.model.TestSuite.from_file_system>`
+  classmethod that uses it internally.
+
+* Classes used by :class:`~robot.running.model.TestSuite`, such as
+  :class:`~robot.running.model.TestCase`, :class:`~robot.running.model.Keyword`
+  and :class:`~robot.running.model.If` that are defined in the
+  :mod:`robot.running.model` module. These classes are typically only needed
+  in type hints.
+
+* Keyword implementation related classes :class:`~robot.running.resourcemodel.UserKeyword`,
+  :class:`~robot.running.librarykeyword.LibraryKeyword`,
+  :class:`~robot.running.invalidkeyword.InvalidKeyword` and their common base class
+  :class:`~robot.running.keywordimplementation.KeywordImplementation`. Also these
+  classes are mainly needed in type hints.
+
+* :class:`~robot.running.builder.settings.TestDefaults` that is part of the
+  `external parsing API`__ and also typically needed only in type hints.
+
+__ http://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#parser-interface
+
+:class:`~robot.running.model.TestSuite` and
+:class:`~robot.running.builder.builders.TestSuiteBuilder` can be imported also via
+the :mod:`robot.api` package.
+
+.. note:: Prior to Robot Framework 6.1, only some classes in
+          :mod:`robot.running.model` were exposed via :mod:`robot.running`.
+          Keyword implementation related classes are new in Robot Framework 7.0.
 
 Examples
 --------
@@ -45,15 +66,13 @@ First, let's assume we have the following test suite in file
         [Setup]    Set Environment Variable    SKYNET    activated
         Environment Variable Should Be Set    SKYNET
 
-We can easily parse and create an executable test suite based on the above file
-using the :class:`~robot.running.builder.TestSuiteBuilder` class as follows::
+We can easily create an executable test suite based on the above file::
 
-    from robot.api import TestSuiteBuilder
+    from robot.api import TestSuite
 
-    suite = TestSuiteBuilder().build('path/to/activate_skynet.robot')
+    suite = TestSuite.from_file_system('path/to/activate_skynet.robot')
 
-That was easy. Let's next generate the same test suite from scratch
-using the :class:`~robot.running.model.TestSuite` class::
+That was easy. Let's next generate the same test suite from scratch::
 
     from robot.api import TestSuite
 
@@ -95,11 +114,45 @@ the results is possible using the
     ResultWriter('skynet.xml').write_results()
 """
 
-from .arguments import ArgInfo, ArgumentSpec, TypeConverter
-from .builder import TestSuiteBuilder, ResourceFileBuilder
-from .context import EXECUTION_CONTEXTS
-from .model import Keyword, TestCase, TestSuite
-from .testlibraries import TestLibrary
-from .usererrorhandler import UserErrorHandler
-from .userkeyword import UserLibrary
-from .runkwregister import RUN_KW_REGISTER
+from .arguments import (
+    ArgInfo as ArgInfo,
+    ArgumentSpec as ArgumentSpec,
+    TypeConverter as TypeConverter,
+    TypeInfo as TypeInfo,
+)
+from .builder import (
+    ResourceFileBuilder as ResourceFileBuilder,
+    TestDefaults as TestDefaults,
+    TestSuiteBuilder as TestSuiteBuilder,
+)
+from .context import EXECUTION_CONTEXTS as EXECUTION_CONTEXTS
+from .invalidkeyword import InvalidKeyword as InvalidKeyword
+from .keywordimplementation import KeywordImplementation as KeywordImplementation
+from .librarykeyword import LibraryKeyword as LibraryKeyword
+from .model import (
+    Break as Break,
+    Continue as Continue,
+    Error as Error,
+    For as For,
+    ForIteration as ForIteration,
+    Group as Group,
+    If as If,
+    IfBranch as IfBranch,
+    Keyword as Keyword,
+    Return as Return,
+    TestCase as TestCase,
+    TestSuite as TestSuite,
+    Try as Try,
+    TryBranch as TryBranch,
+    Var as Var,
+    While as While,
+    WhileIteration as WhileIteration,
+)
+from .resourcemodel import (
+    Import as Import,
+    ResourceFile as ResourceFile,
+    UserKeyword as UserKeyword,
+    Variable as Variable,
+)
+from .runkwregister import RUN_KW_REGISTER as RUN_KW_REGISTER
+from .testlibraries import TestLibrary as TestLibrary

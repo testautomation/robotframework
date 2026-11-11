@@ -25,8 +25,8 @@ Log with different levels
 
 Invalid log level failure is catchable
     Run Keyword And Expect Error
-    ...   Invalid log level 'INVALID'.
-    ...   Log    Invalid level    INVALID
+    ...   ValueError: Argument 'level' got value 'invalid' that cannot be converted to 'TRACE', 'DEBUG', 'INFO', 'CONSOLE', 'HTML', 'WARN' or 'ERROR'.
+    ...   Log    Invalid level    invalid
 
 HTML is escaped by default
     Log    <b>not bold</b>
@@ -43,13 +43,21 @@ Explicit HTML
     Log    ${HTML}    html=${FALSE}    level=debug
 
 FAIL is not valid log level
-    [Documentation]    FAIL Invalid log level 'FAIL'.
+    [Documentation]    FAIL
+    ...    ValueError: Argument 'level' got value 'FAIL' that cannot be converted to 'TRACE', 'DEBUG', 'INFO', 'CONSOLE', 'HTML', 'WARN' or 'ERROR'.
     Log    This fails    FAIL
 
 Log also to console
     [Setup]    Set Log Level    DEBUG
     Log    Hello, console!    console=yepyep    html=false
     Log    ${HTML}    debug    enable both html    and console
+
+Disable logging to console
+    Log    WARN but no console     WARN     console=False
+    Log    ERROR but no console    ERROR    console=False
+
+CONSOLE pseudo level
+    Log    Hello, info and console!    console
 
 repr=True
     [Setup]    Set Log Level    DEBUG
@@ -89,9 +97,9 @@ formatter=str
 formatter=repr pretty prints
     ${long string} =    Evaluate    ' '.join(['Robot Framework'] * 1000)
     Log    ${long string}    formatter=repr
-    ${small dict} =    Evaluate    {'small': 'dict', 3: b'items', 'a': 'sorted'}
+    ${small dict} =    Evaluate    {'small': 'dict', 3: b'items', 'NOT': 'sorted'}
     Log    ${small dict}    formatter=repr    console=TRUE
-    ${big dict} =    Evaluate    {'big': 'dict', 'long': '${long string}', 'nested': ${small dict}, 'list': [1, 2, 3]}
+    ${big dict} =    Evaluate    {'big': 'dict', 'long': '${long string}', 'nested': ${small dict}, 'list': [1, 2, 3], 'sorted': False}
     Log    ${big dict}    html=NO    formatter=repr
     ${small list} =    Evaluate    ['small', b'list', 'not sorted', 4]
     Log    ${small list}    console=gyl    formatter=repr
@@ -122,7 +130,8 @@ formatter=type
     Log    ${now}    formatter=type
 
 formatter=invalid
-    [Documentation]    FAIL ValueError: Invalid formatter 'invalid'. Available 'str', 'repr', 'ascii', 'len', and 'type'.
+    [Documentation]    FAIL
+    ...    ValueError: Argument 'formatter' got value 'invalid' that cannot be converted to 'str', 'repr', 'ascii', 'type' or 'len'.
     Log    x    formatter=invalid
 
 Log callable
@@ -136,6 +145,7 @@ Log Many
     Log Many    @{LIST}
     Log Many
     Log Many    @{EMPTY}
+    Log Many    preserve    ${EMPTY}   empty    ${EMPTY}
     Log Many    -${EMPTY}-    -@{EMPTY}-    -&{EMPTY}-
     Log Many    ${LIST}[0]    ${DICT}[b]
 
@@ -149,15 +159,15 @@ Log Many with positional, named and dict arguments
     Log Many    @{LIST}    &{DICT}    @{LIST}    &{DICT}
 
 Log Many with non-existing variable
-    [Documentation]    FAIL Variable '${no such variable}' not found.
+    [Documentation]    FAIL Variable '\${no such variable}' not found.
     Log Many    ${no such variable}
 
 Log Many with list variable containing non-list
-    [Documentation]    FAIL Value of variable '@{HTML}' is not list or list-like.
+    [Documentation]    FAIL Value of variable '\@{HTML}' is not list or list-like.
     Log Many    @{HTML}
 
 Log Many with dict variable containing non-dict
-    [Documentation]    FAIL Value of variable '&{LIST}' is not dictionary or dictionary-like.
+    [Documentation]    FAIL Value of variable '\&{LIST}' is not dictionary or dictionary-like.
     Log Many    &{LIST}
 
 Log To Console

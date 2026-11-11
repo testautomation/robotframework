@@ -4,6 +4,9 @@ Resource          resources/embedded_args_in_uk_2.robot
 
 *** Variables ***
 ${INDENT}         ${SPACE * 4}
+${foo}            foo
+${bar}            bar
+${zap}            zap
 
 *** Test Cases ***
 Embedded Arguments In User Keyword Name
@@ -11,6 +14,12 @@ Embedded Arguments In User Keyword Name
     Should Be Equal    ${name}-${book}    Peke-Advanced Python
     ${name}    ${book} =    User Juha Selects Playboy From Webshop
     Should Be Equal    ${name}-${book}    Juha-Playboy
+
+Embedded arguments with type conversion
+    [Documentation]    Type conversion is tested more thorougly in 'variables/variable_types.robot'.
+    ...    FAIL    ValueError: Argument 'item' got value 'horse' that cannot be converted to 'book' or 'bottle'.
+    Buy 99 bottles
+    Buy 2 horses
 
 Complex Embedded Arguments
     # Notice that Given/When/Then is part of the keyword name
@@ -32,11 +41,24 @@ Argument Namespaces with Embedded Arguments
 Embedded Arguments as Variables
     ${name}    ${item} =    User ${42} Selects ${EMPTY} From Webshop
     Should Be Equal    ${name}-${item}    42-
-    ${name}    ${item} =    User ${name} Selects ${SPACE * 10} From Webshop
+    ${name}    ${item} =    User ${name} Selects ${SPACE * 100}[:10] From Webshop
     Should Be Equal    ${name}-${item}    42-${SPACE*10}
     ${name}    ${item} =    User ${name} Selects ${TEST TAGS} From Webshop
     Should Be Equal    ${name}    ${42}
     Should Be Equal    ${item}    ${{[]}}
+    ${name}    ${item} =    User ${foo.title()} Selects ${{[$foo, $bar]}}[1][:2] From Webshop
+    Should Be Equal    ${name}-${item}    Foo-ba
+
+Embedded arguments as variables and other content
+    ${name}    ${item} =    User ${foo}${EMPTY}${bar} Selects ${foo}, ${bar} and ${zap} From Webshop
+    Should Be Equal    ${name}    ${foo}${bar}
+    Should Be Equal    ${item}    ${foo}, ${bar} and ${zap}
+
+Embedded arguments as variables containing characters that exist also in keyword name
+    ${1} + ${2} = ${3}
+    ${1 + 2} + ${3} = ${6}
+    ${1} + ${2 + 3} = ${6}
+    ${1 + 2} + ${3 + 4} = ${10}
 
 Embedded Arguments as List And Dict Variables
     ${i1}    ${i2} =    Evaluate    [1, 2, 3, 'neljä'], {'a': 1, 'b': 2}
@@ -77,6 +99,7 @@ Custom Regexp With Curly Braces
     Today is Tuesday and tomorrow is Wednesday
     Literal { Brace
     Literal } Brace
+    Literal {} Braces
 
 Custom Regexp With Escape Chars
     Custom Regexp With Escape Chars e.g. \\, \\\\ and c:\\temp\\test.txt
@@ -90,18 +113,44 @@ Grouping Custom Regexp
     ${matches} =    Grouping Cuts Regexperts
     Should Be Equal    ${matches}    Cuts-Regexperts
 
-Custom Regexp Matching Variables
-    [Documentation]    FAIL 42 != foo
-    ${foo}    ${bar}    ${zap} =    Create List    foo    bar    zap
-    I execute "${foo}"
-    I execute "${bar}" with "${zap}"
-    I execute "${42}"
+Custom Regex With Leading And Trailing Spaces
+    Custom Regexs With Leading And Trailing Spaces: " x ", " y " and " z "
 
-Custom Regexp Matching Variables When Regexp Does No Match Them
+Custom Regexp Matching Variables
+    [Documentation]    FAIL bar != foo
+    I execute "${foo}"
+    I execute "${bar}" with "${zap + 'xxx'}[:3]"
+    I execute "${bar}"
+
+Custom regexp with inline Python evaluation
+    [Documentation]    FAIL bar != foo
+    I execute "${{'foo'}}"
+    I execute "${{'BAR'.lower()}}" with "${{"a".join("zp")}}"
+    I execute "${{'bar'}}"
+
+Non Matching Variable Is Accepted With Custom Regexp (But Not For Long)
+    [Documentation]    FAIL    foo != bar    # ValueError: Embedded argument 'x' got value 'foo' that does not match custom pattern 'bar'.
+    I execute "${foo}" with "${bar}"
+
+Partially Matching Variable Is Accepted With Custom Regexp (But Not For Long)
+    [Documentation]    FAIL    ba != bar    # ValueError: Embedded argument 'x' got value 'ba' that does not match custom pattern 'bar'.
+    I execute "${bar[:2]}" with "${zap * 2}"
+
+Non String Variable Is Accepted With Custom Regexp
+    [Documentation]    FAIL 42 != foo
     Result of ${3} + ${-1} is ${2}
     Result of ${40} - ${-2} is ${42}
-    ${s42} =    Set Variable    42
-    I want ${42} and ${s42} as variables
+    I execute "${42}"
+
+Custom regexp with inline flag
+    VAR   ${flag}   flag
+    VAR   ${flng}   fl\ng
+    Custom regexp with ignore-case flag
+    Custom regexp with ignore-case FLAG    expected=FLAG
+    Custom regexp with ignore-case ${flag}
+    Custom regexp with dot-matches-all flag
+    Custom regexp with dot-matches-all ${flag}
+    Custom regexp with dot-matches-all ${flng}    expected=${flng}
 
 Regexp Extensions Are Not Supported
     [Documentation]    FAIL Regexp extensions are not allowed in embedded arguments.
@@ -142,7 +191,7 @@ Embedded Arguments In Resource File Used Explicitly
     Should Be Equal    ${ret}    peke-resource
     embedded_args_in_uk_2.-r1-r2-+r1+
 
-Embedded And Positional Arguments Do Not Work Together
+Keyword with only embedded arguments doesn't accept normal arguments
     [Documentation]    FAIL Keyword 'User \${user} Selects \${item} From Webshop' expected 0 arguments, got 1.
     Given this "usage" with @{EMPTY} works    @{EMPTY}
     Then User Invalid Selects Invalid From Webshop    invalid
@@ -151,12 +200,18 @@ Keyword with embedded args cannot be used as "normal" keyword
     [Documentation]    FAIL Variable '${user}' not found.
     User ${user} Selects ${item} From Webshop
 
-Creating keyword with both normal and embedded arguments fails
-    [Documentation]    FAIL Keyword cannot have both normal and embedded arguments.
-    Keyword with ${embedded} and normal args is invalid    arg1    arg2
+Keyword with both embedded and normal arguments
+    Number of horses should be    2
+    Number of horses should be    2    swimming
+    Number of dogs should be    count=3
+
+Keyword with both embedded and normal arguments with too few arguments
+    [Documentation]    FAIL Keyword 'Number of ${animals} should be' expected 1 to 2 arguments, got 0.
+    Number of horses should be
 
 Keyword Matching Multiple Keywords In Test Case File
-    [Documentation]    FAIL Test case file contains multiple keywords matching name 'foo+tc+bar-tc-zap':
+    [Documentation]    FAIL
+    ...    Multiple keywords matching name 'foo+tc+bar-tc-zap' found:
     ...    ${INDENT}\${a}+tc+\${b}
     ...    ${INDENT}\${a}-tc-\${b}
     foo+tc+bar
@@ -165,26 +220,29 @@ Keyword Matching Multiple Keywords In Test Case File
     foo+tc+bar-tc-zap
 
 Keyword Matching Multiple Keywords In One Resource File
-    [Documentation]    FAIL Resource file 'embedded_args_in_uk_1.robot' contains multiple keywords matching name 'foo+r1+bar-r1-zap':
-    ...    ${INDENT}\${a}+r1+\${b}
-    ...    ${INDENT}\${a}-r1-\${b}
+    [Documentation]    FAIL
+    ...    Multiple keywords matching name 'foo+r1+bar-r1-zap' found:
+    ...    ${INDENT}embedded_args_in_uk_1.\${a}+r1+\${b}
+    ...    ${INDENT}embedded_args_in_uk_1.\${a}-r1-\${b}
     foo+r1+bar
     foo-r1-bar
     foo+r1+bar-r1-zap
 
 Keyword Matching Multiple Keywords In Different Resource Files
-    [Documentation]    FAIL Multiple keywords with name 'foo-r1-bar-r2-zap' found. \
-    ...    Give the full name of the keyword you want to use:
-    ...    ${INDENT}embedded_args_in_uk_1.foo-r1-bar-r2-zap
-    ...    ${INDENT}embedded_args_in_uk_2.foo-r1-bar-r2-zap
+    [Documentation]    FAIL
+    ...    Multiple keywords matching name 'foo-r1-bar-r2-zap' found:
+    ...    ${INDENT}embedded_args_in_uk_1.\${a}-r1-\${b}
+    ...    ${INDENT}embedded_args_in_uk_2.\${arg1}-r2-\${arg2}
     foo-r1-bar
     foo-r2-bar
     foo-r1-bar-r2-zap
 
 Keyword Matching Multiple Keywords In One And Different Resource Files
-    [Documentation]    FAIL Resource file 'embedded_args_in_uk_1.robot' contains multiple keywords matching name '-r1-r2-+r1+':
-    ...    ${INDENT}\${a}+r1+\${b}
-    ...    ${INDENT}\${a}-r1-\${b}
+    [Documentation]    FAIL
+    ...    Multiple keywords matching name '-r1-r2-+r1+' found:
+    ...    ${INDENT}embedded_args_in_uk_1.\${a}+r1+\${b}
+    ...    ${INDENT}embedded_args_in_uk_1.\${a}-r1-\${b}
+    ...    ${INDENT}embedded_args_in_uk_2.\${arg1}-r2-\${arg2}
     -r1-r2-+r1+
 
 Same name with different regexp works
@@ -194,14 +252,14 @@ Same name with different regexp works
 
 Same name with different regexp matching multiple fails
     [Documentation]    FAIL
-    ...    Test case file contains multiple keywords matching name 'It is a cat':
+    ...    Multiple keywords matching name 'It is a cat' found:
     ...    ${INDENT}It is \${animal:a (cat|cow)}
     ...    ${INDENT}It is \${animal:a (dog|cat)}
     It is a cat
 
 Same name with same regexp fails
     [Documentation]    FAIL
-    ...    Test case file contains multiple keywords matching name 'It is totally same':
+    ...    Multiple keywords matching name 'It is totally same' found:
     ...    ${INDENT}It is totally \${same}
     ...    ${INDENT}It is totally \${same}
     It is totally same
@@ -210,6 +268,10 @@ Same name with same regexp fails
 User ${user} Selects ${item} From Webshop
     Log    This is always executed
     RETURN    ${user}    ${item}
+
+Buy ${quantity: int} ${item: Literal['book', 'bottle']}s
+    Should Be Equal    ${quantity}    ${99}
+    Should Be Equal    ${item}        bottle
 
 ${prefix:Given|When|Then} this "${item}" ${no good name for this arg ...}
     Log    ${item}-${no good name for this arg ...}
@@ -220,15 +282,16 @@ My embedded ${var}
 ${x:x} gets ${y:\w} from the ${z:.}
     Should Be Equal    ${x}-${y}-${z}    x-y-z
 
-Keyword with ${embedded} and normal args is invalid
-    [Arguments]    ${arg1}    ${arg2}
-    Fail    Creating keyword should fail. This should never be executed
-
 ${a}-tc-${b}
     Log    ${a}-tc-${b}
 
 ${a}+tc+${b}
     Log    ${a}+tc+${b}
+
+${x} + ${y} = ${z}
+    Should Be True    ${x} + ${y} == ${z}
+    Should Be True    isinstance($x, int) and isinstance($y, int) and isinstance($z, int)
+    Should Be True    $x + $y == $z
 
 I execute "${x:[^"]*}"
     Should Be Equal    ${x}    foo
@@ -239,10 +302,6 @@ I execute "${x:bar}" with "${y:...}"
 
 Result of ${a:\d+} ${operator:[+-]} ${b:\d+} is ${result}
     Should Be True    ${a} ${operator} ${b} == ${result}
-
-I want ${integer:whatever} and ${string:everwhat} as variables
-    Should Be Equal    ${integer}    ${42}
-    Should Be Equal    ${string}    42
 
 Today is ${date:\d{4}-\d{2}-\d{2}}
     Should Be Equal    ${date}    2011-06-21
@@ -257,25 +316,36 @@ Literal ${Curly:\{} Brace
 Literal ${Curly:\}} Brace
     Should Be Equal    ${Curly}    }
 
-Custom Regexp With Escape Chars e.g. ${1E:\\\\}, ${2E:\\\\\\\\} and ${PATH:c:\\\\temp\\.*}
+Literal ${Curly:{}} Braces
+    Should Be Equal    ${Curly}    {}
+
+Custom Regexp With Escape Chars e.g. ${1E:\\}, ${2E:\\\\} and ${PATH:c:\\temp\\.*}
     Should Be Equal    ${1E}    \\
     Should Be Equal    ${2E}    \\\\
     Should Be Equal    ${PATH}    c:\\temp\\test.txt
 
-Custom Regexp With ${pattern:\\\\\}}
+Custom Regexp With ${pattern:\\\}}
     Should Be Equal    ${pattern}    \\}
 
-Custom Regexp With ${pattern:\\\\\{}
+Custom Regexp With ${pattern:\\\{}
     Should Be Equal    ${pattern}    \\{
 
-Custom Regexp With ${pattern:\\\\{}}
+Custom Regexp With ${pattern:\\{}}
     Should Be Equal    ${pattern}    \\{}
 
 Grouping ${x:Cu(st|ts)(om)?} ${y:Regexp\(?erts\)?}
     RETURN    ${x}-${y}
 
-Regexp extensions like ${x:(?x)re} are not supported
-    This is not executed
+Custom Regexs With Leading And Trailing Spaces: "${x:\ x }", "${y:( y )}" and "${z: str: z }"
+    Should Be Equal    ${x}-${y}-${z}    ${SPACE}x - y - z${SPACE}
+
+Custom regexp with ignore-case ${flag:(?i)flag}
+    [Arguments]    ${expected}=flag
+    Should Be Equal    ${flag}    ${expected}
+
+Custom regexp with dot-matches-all ${flag:(?sax)f...}
+    [Arguments]    ${expected}=flag
+    Should Be Equal    ${flag}    ${expected}
 
 Invalid ${x:(} Regexp
     This is not executed
@@ -294,3 +364,7 @@ It is totally ${same}
 
 It is totally ${same}
     Fail    Not executed
+
+Number of ${animals} should be
+    [Arguments]    ${count}    ${activity}=walking
+    Log    ${count} ${animals} are ${activity}

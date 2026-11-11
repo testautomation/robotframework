@@ -33,6 +33,24 @@ Union with ABC
     ${1}     ${1}
     1        ${1}
 
+Union with Any
+    [Documentation]    Any value is accepted without conversion
+    [Template]    Union with Any
+    ${1}       ${1}
+    ${1.2}     ${1.2}
+    ${None}    ${None}
+    1          1
+    1.2        1.2
+
+Union with object
+    [Documentation]    Any value is accepted but conversion is attempted
+    [Template]    Union with object
+    ${1}       ${1}
+    ${1.2}     ${1.2}
+    ${None}    ${None}
+    1          ${1}
+    1.2        1.2
+
 Union with subscripted generics
     [Template]    Union with subscripted generics
     \[1, 2]        [1, 2]
@@ -61,17 +79,23 @@ Argument not matching union
     [Template]    Conversion Should Fail
     Union of int and float             not a number    type=integer or float
     Union of int and float             ${NONE}         type=integer or float    arg_type=None
-    Union of int and float             ${{type('Custom', (), {})()}}
-    ...                                                type=integer or float    arg_type=Custom
+    Union of int and float             ${CUSTOM}       type=integer or float    arg_type=Custom
     Union with int and None            invalid         type=integer or None
-    Union with subscripted generics    invalid         type=list or integer
+    Union with subscripted generics    invalid         type=list[int] or integer
 
-Union with custom type
+Union with unrecognized type
     ${myobject}=    Create my object
-    ${object}=    Create unexpected object
     Custom type in union    my string      str
     Custom type in union    ${myobject}    MyObject
-    Custom type in union    ${object}      UnexpectedObject
+    Custom type in union    ${42}          str
+    Custom type in union    ${CUSTOM}      str
+
+Union with only unrecognized types
+    ${myobject}=    Create my object
+    Only custom types in union    my string      str
+    Only custom types in union    ${myobject}    MyObject
+    Only custom types in union    ${42}          int
+    Only custom types in union    ${CUSTOM}      Custom
 
 Avoid unnecessary conversion
     [Template]    Union With String First

@@ -183,6 +183,20 @@ Grep File With Windows line endings
     Grep And Check File    f*a    foo bar    ${UTF-8 WINDOWS FILE}
     Grep And Check File    f.*a    foo bar    ${UTF-8 WINDOWS FILE}    regexp=${True}
 
+Path as `pathlib.Path`
+    Create File    ${BASE}/file.txt    content\nthree\nlines
+    ${content} =    Get File    ${PATH/'file.txt'}
+    Should Be Equal    ${content}    content\nthree\nlines
+    ${content} =    Grep File    ${PATH/'file.txt'}    t
+    Should Be Equal    ${content}    content\nthree
+
+fnmatch.translate compatibility
+    [Documentation]    Grep File drops the last two characters from the pattern
+    ...                returned by ``fnmatch.translate``. This test makes sure
+    ...                those characters are what we expext them to be.
+    ${ending} =    Evaluate    fnmatch.translate("p")[-2:].lower()
+    Should Be Equal    ${ending}   \\z
+
 *** Keywords ***
 Get And Check File
     [Arguments]    ${path}    ${expected}

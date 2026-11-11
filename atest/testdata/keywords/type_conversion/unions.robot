@@ -1,5 +1,6 @@
 *** Settings ***
 Library           unions.py
+Variables         variables.py
 Resource          conversion.resource
 
 *** Test Cases ***
@@ -24,6 +25,7 @@ Union with None and str
     1          1
     NONE       NONE
     ${2}       ${2}
+    ${2.0}     ${2}
     ${None}    ${None}
     three      three
 
@@ -31,6 +33,24 @@ Union with ABC
     [Template]    Union with ABC
     ${1}     ${1}
     1        ${1}
+
+Union with Any
+    [Documentation]    Any value is accepted without conversion
+    [Template]    Union with Any
+    ${1}       ${1}
+    ${1.2}     ${1.2}
+    ${None}    ${None}
+    1          1
+    1.2        1.2
+
+Union with object
+    [Documentation]    Any value is accepted but conversion is attempted
+    [Template]    Union with object
+    ${1}       ${1}
+    ${1.2}     ${1.2}
+    ${None}    ${None}
+    1          ${1}
+    1.2        1.2
 
 Union with subscripted generics
     [Template]    Union with subscripted generics
@@ -51,26 +71,55 @@ Union with TypedDict
     NONE               None
     ${NONE}            None
 
+Union with str and TypedDict
+    [Template]    Union with str and TypedDict
+    {'x': 1}           "{'x': 1}"
+    ${{{'x': 1}}}      {'x': 1}
+    ${{type('NonDictMapping', (collections.abc.Mapping,), {'__getitem__': lambda s, k: {'x': 1}[k], '__iter__': lambda s: iter({'x': 1}), '__len__': lambda s: 1})()}}
+    ...                {'x': 1}    non_dict_mapping=True
+    ${{{'bad': 1}}}    "{'bad': 1}"
+    ${{{'x': '1'}}}    "{'x': '1'}"
+
 Union with item not liking isinstance
     [Template]    Union with item not liking isinstance
     42                 ${42}
     3.14               ${3.14}
 
+Union with item failing with other exception than ValueError
+    [Template]    Union of set and list
+    \[1, 2]             ${{ {1, 2} }}
+    \[[1], [2]]         ${{ [[1], [2]] }}
+    ${{ ([1], [2]) }}   ${{ [[1], [2]] }}
+
 Argument not matching union
     [Template]    Conversion Should Fail
     Union of int and float             not a number    type=integer or float
-    Union of int and float             ${NONE}         type=integer or float    arg_type=None
-    Union of int and float             ${{type('Custom', (), {})()}}
-    ...                                                type=integer or float    arg_type=Custom
+    Union of int and float             ${NONE}         type=integer or float                           arg_type=None
+    Union of int and float             ${CUSTOM}       type=integer or float                           arg_type=Custom
+    Union of int and float             ${NO_CLASS}     type=integer or float                           arg_type=NoClass
     Union with int and None            invalid         type=integer or None
-    Union with subscripted generics    invalid         type=list or integer
+    Union with int and None            ${1.1}          type=integer or None                            arg_type=float
+    Union with int and None            ${NO_CLASS}     type=integer or None                            arg_type=NoClass
+    Union with subscripted generics    invalid         type=List[int] or integer
+    Union with subscripted generics    ${NO_CLASS}     type=List[int] or integer                       arg_type=NoClass
+    Union with multiple types          invalid         type=integer, float, None, date or timedelta
+    Union with multiple types          ${NO_CLASS}     type=integer, float, None, date or timedelta    arg_type=NoClass
 
-Union with custom type
+Union with unrecognized type
     ${myobject}=    Create my object
-    ${object}=    Create unexpected object
-    Custom type in union    my string      str
-    Custom type in union    ${myobject}    MyObject
-    Custom type in union    ${object}      UnexpectedObject
+    Unrecognized type    my string      str
+    Unrecognized type    ${myobject}    MyObject
+    Unrecognized type    ${42}          str
+    Unrecognized type    ${CUSTOM}      str
+    Unrecognized type    ${{type('StrFails', (), {'__str__': lambda self: 1/0})()}}
+    ...                  StrFails
+
+Union with only unrecognized types
+    ${myobject}=    Create my object
+    Only unrecognized types    my string      str
+    Only unrecognized types    ${myobject}    MyObject
+    Only unrecognized types    ${42}          int
+    Only unrecognized types    ${CUSTOM}      Custom
 
 Multiple types using tuple
     [Template]    Tuple of int float and string
@@ -84,8 +133,7 @@ Argument not matching tuple types
     [Template]    Conversion Should Fail
     Tuple of int and float    not a number    type=integer or float
     Tuple of int and float    ${NONE}         type=integer or float    arg_type=None
-    Tuple of int and float    ${{type('Custom', (), {})()}}
-    ...                                       type=integer or float    arg_type=Custom
+    Tuple of int and float    ${CUSTOM}       type=integer or float    arg_type=Custom
 
 Optional argument
     [Template]    Optional argument
@@ -134,6 +182,16 @@ Avoid unnecessary conversion with ABC
     ${1}                             ${1}
     ${{fractions.Fraction(1, 3)}}    ${{fractions.Fraction(1, 3)}}
 
+Default value type
+    [Documentation]    Default value type is used if conversion fails.
+    Incompatible default    1      ${1}
+    Incompatible default    1.2    ${1.2}
+
+Default value type with unrecognized type
+    [Documentation]    Default value type is never used because conversion cannot fail.
+    Unrecognized type with incompatible default    1      ${1}
+    Unrecognized type with incompatible default    1.2    1.2
+
 Union with invalid types
     [Template]    Union with invalid types
     xxx      xxx
@@ -143,3 +201,11 @@ Tuple with invalid types
     [Template]    Tuple with invalid types
     xxx      xxx
     ${42}    ${42}
+
+Union without types
+    [Documentation]    FAIL    No keyword with name 'Union without types' found.
+    Union without types    whatever
+
+Empty tuple
+    [Documentation]    FAIL    No keyword with name 'Empty tuple' found.
+    Empty tuple            ${666}

@@ -21,12 +21,12 @@ Listen Some
 
 Correct Attributes To Listener Methods
     ${status} =    Log File    %{TEMPDIR}/${ATTR_TYPE_FILE}
-    Stderr Should Not Contain    attributeverifyinglistener
+    Stderr Should Not Contain    VerifyAttributes
     Should Not Contain    ${status}    FAILED
 
 Keyword Tags
     ${status} =    Log File    %{TEMPDIR}/${ATTR_TYPE_FILE}
-    Should Contain X Times    ${status}    PASSED | tags: [force, keyword, tags]    6
+    Should Contain X Times    ${status}    passed | tags: [force, keyword, tags]    6
 
 Suite And Test Counts
     Run Tests    --listener listeners.SuiteAndTestCounts    misc/suites/subsuites misc/suites/subsuites2
@@ -47,8 +47,8 @@ Keyword Status
 Executing Keywords from Listeners
     Run Tests    --listener listeners.KeywordExecutingListener    misc/pass_and_fail.robot
     ${tc}=    Get Test Case    Pass
-    Check Log Message    ${tc.kws[0].msgs[0]}    Start Pass
-    Check Log Message    ${tc.kws[2].msgs[0]}    End Pass
+    Check Log Message    ${tc[0, 0]}    Start Pass
+    Check Log Message    ${tc[4, 0]}    End Pass
 
 Test Template
     ${listener} =    Normalize Path    ${LISTENER DIR}/verify_template_listener.py
@@ -56,10 +56,16 @@ Test Template
     Stderr Should Be Empty
 
 Keyword Arguments Are Always Strings
-    ${result} =    Run Tests    --listener attributeverifyinglistener    ${LISTENER DIR}/keyword_argument_types.robot
+    ${result} =    Run Tests    --listener VerifyAttributes    ${LISTENER DIR}/keyword_argument_types.robot
     Should Be Empty    ${result.stderr}
     Check Test Tags    Run Keyword with already resolved non-string arguments in test data    1    2
     Check Test Case    Run Keyword with non-string arguments in library
+    ${status} =    Log File    %{TEMPDIR}/${ATTR_TYPE_FILE}
+    Should Not Contain    ${status}    FAILED
+
+Keyword Attributes For Control Structures
+    Run Tests    --listener VerifyAttributes    misc/for_loops.robot misc/while.robot misc/try_except.robot misc/if_else.robot
+    Stderr Should Be Empty
     ${status} =    Log File    %{TEMPDIR}/${ATTR_TYPE_FILE}
     Should Not Contain    ${status}    FAILED
 
@@ -76,10 +82,10 @@ TimeoutError occurring during listener method is propagaged
 Run Tests With Listeners
     ${args} =    Join Command Line
     ...    --listener    ListenAll
-    ...    --listener    ListenAll:%{TEMPDIR}${/}${ALL_FILE2}
+    ...    --listener    ListenAll${:}%{TEMPDIR}${/}${ALL_FILE2}
     ...    --listener    module_listener
     ...    --listener    listeners.ListenSome
-    ...    --listener    attributeverifyinglistener
+    ...    --listener    VerifyAttributes
     ...    --metadata    ListenerMeta:Hello
     Run Tests    ${args}    misc/pass_and_fail.robot
 
@@ -88,51 +94,80 @@ Check Listen All File
     @{expected}=    Create List    Got settings on level: INFO
     ...    SUITE START: Pass And Fail (s1) 'Some tests here' [ListenerMeta: Hello]
     ...    SETUP START: My Keyword ['Suite Setup'] (line 3)
-    ...    KEYWORD START: BuiltIn.Log ['Hello says "\${who}"!', '\${LEVEL1}'] (line 27)
+    ...    KEYWORD START: BuiltIn.Log ['Hello says "\${who}"!', '\${LEVEL1}'] (line 32)
     ...    LOG MESSAGE: [INFO] Hello says "Suite Setup"!
     ...    KEYWORD END: PASS
-    ...    KEYWORD START: BuiltIn.Log ['Debug message', '\${LEVEL2}'] (line 28)
+    ...    KEYWORD START: BuiltIn.Log ['Debug message', '\${LEVEL2}'] (line 33)
     ...    KEYWORD END: PASS
-    ...    KEYWORD START: \${assign} = String.Convert To Upper Case ['Just testing...'] (line 29)
+    ...    KEYWORD START: \${assign} = String.Convert To Upper Case ['Just testing...'] (line 34)
     ...    LOG MESSAGE: [INFO] \${assign} = JUST TESTING...
     ...    KEYWORD END: PASS
-    ...    RETURN START: (line 30)
+    ...    VAR START: \${expected}${SPACE*4}JUST TESTING... (line 35)
+    ...    LOG MESSAGE: [INFO] \${expected} = JUST TESTING...
+    ...    VAR END: PASS
+    ...    KEYWORD START: BuiltIn.Should Be Equal ['\${assign}', '\${expected}'] (line 36)
+    ...    KEYWORD END: PASS
+    ...    RETURN START: (line 37)
     ...    RETURN END: PASS
     ...    SETUP END: PASS
-    ...    TEST START: Pass (s1-t1, line 12) '' ['force', 'pass']
-    ...    KEYWORD START: My Keyword ['Pass'] (line 15)
-    ...    KEYWORD START: BuiltIn.Log ['Hello says "\${who}"!', '\${LEVEL1}'] (line 27)
+    ...    TEST START: Pass (s1-t1, line 15) '' ['force', 'pass']
+    ...    KEYWORD START: My Keyword ['Pass'] (line 18)
+    ...    KEYWORD START: BuiltIn.Log ['Hello says "\${who}"!', '\${LEVEL1}'] (line 32)
     ...    LOG MESSAGE: [INFO] Hello says "Pass"!
     ...    KEYWORD END: PASS
-    ...    KEYWORD START: BuiltIn.Log ['Debug message', '\${LEVEL2}'] (line 28)
+    ...    KEYWORD START: BuiltIn.Log ['Debug message', '\${LEVEL2}'] (line 33)
     ...    KEYWORD END: PASS
-    ...    KEYWORD START: \${assign} = String.Convert To Upper Case ['Just testing...'] (line 29)
+    ...    KEYWORD START: \${assign} = String.Convert To Upper Case ['Just testing...'] (line 34)
     ...    LOG MESSAGE: [INFO] \${assign} = JUST TESTING...
     ...    KEYWORD END: PASS
-    ...    RETURN START: (line 30)
+    ...    VAR START: \${expected}${SPACE*4}JUST TESTING... (line 35)
+    ...    LOG MESSAGE: [INFO] \${expected} = JUST TESTING...
+    ...    VAR END: PASS
+    ...    KEYWORD START: BuiltIn.Should Be Equal ['\${assign}', '\${expected}'] (line 36)
+    ...    KEYWORD END: PASS
+    ...    RETURN START: (line 37)
     ...    RETURN END: PASS
     ...    KEYWORD END: PASS
+    ...    KEYWORD START: example.Resource Keyword (line 19)
+    ...    KEYWORD START: BuiltIn.Log ['Hello, resource!'] (line 3)
+    ...    LOG MESSAGE: [INFO] Hello, resource!
+    ...    KEYWORD END: PASS
+    ...    KEYWORD END: PASS
+    ...    KEYWORD START: BuiltIn.Should Be Equal ['\${VARIABLE}', 'From variables.py with arg 1'] (line 20)
+    ...    KEYWORD END: PASS
+    ...    TEARDOWN START: BuiltIn.Log ['Teardown!'] (line 4)
+    ...    LOG MESSAGE: [INFO] Teardown!
+    ...    TEARDOWN END: PASS
     ...    TEST END: PASS
-    ...    TEST START: Fail (s1-t2, line 17) 'FAIL Expected failure' ['fail', 'force']
-    ...    KEYWORD START: My Keyword ['Fail'] (line 20)
-    ...    KEYWORD START: BuiltIn.Log ['Hello says "\${who}"!', '\${LEVEL1}'] (line 27)
+    ...    TEST START: Fail (s1-t2, line 22) 'FAIL Expected failure' ['fail', 'force']
+    ...    KEYWORD START: My Keyword ['Fail'] (line 25)
+    ...    KEYWORD START: BuiltIn.Log ['Hello says "\${who}"!', '\${LEVEL1}'] (line 32)
     ...    LOG MESSAGE: [INFO] Hello says "Fail"!
     ...    KEYWORD END: PASS
-    ...    KEYWORD START: BuiltIn.Log ['Debug message', '\${LEVEL2}'] (line 28)
+    ...    KEYWORD START: BuiltIn.Log ['Debug message', '\${LEVEL2}'] (line 33)
     ...    KEYWORD END: PASS
-    ...    KEYWORD START: \${assign} = String.Convert To Upper Case ['Just testing...'] (line 29)
+    ...    KEYWORD START: \${assign} = String.Convert To Upper Case ['Just testing...'] (line 34)
     ...    LOG MESSAGE: [INFO] \${assign} = JUST TESTING...
     ...    KEYWORD END: PASS
-    ...    RETURN START: (line 30)
+    ...    VAR START: \${expected}${SPACE*4}JUST TESTING... (line 35)
+    ...    LOG MESSAGE: [INFO] \${expected} = JUST TESTING...
+    ...    VAR END: PASS
+    ...    KEYWORD START: BuiltIn.Should Be Equal ['\${assign}', '\${expected}'] (line 36)
+    ...    KEYWORD END: PASS
+    ...    RETURN START: (line 37)
     ...    RETURN END: PASS
     ...    KEYWORD END: PASS
-    ...    KEYWORD START: BuiltIn.Fail ['Expected failure'] (line 21)
+    ...    KEYWORD START: BuiltIn.Fail ['Expected failure'] (line 26)
     ...    LOG MESSAGE: [FAIL] Expected failure
     ...    KEYWORD END: FAIL
+    ...    TEARDOWN START: BuiltIn.Log ['Teardown!'] (line 4)
+    ...    LOG MESSAGE: [INFO] Teardown!
+    ...    TEARDOWN END: PASS
     ...    TEST END: FAIL Expected failure
     ...    SUITE END: FAIL 2 tests, 1 passed, 1 failed
     ...    Output: output.xml    Closing...
     Check Listener File    ${filename}    @{expected}
+    Stderr Should Be Empty
 
 Calling listener failed
     [Arguments]    ${method}    ${error}

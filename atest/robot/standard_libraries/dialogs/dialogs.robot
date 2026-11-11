@@ -1,6 +1,6 @@
 *** Settings ***
 Suite Setup       Run Tests    ${EMPTY}    standard_libraries/dialogs/dialogs.robot
-Force Tags        manual    no-ci
+Test Tags         manual    no-ci
 Resource          atest_resource.robot
 
 *** Test Cases ***
@@ -40,7 +40,25 @@ Get Value From User Cancelled
 Get Value From User Exited
     Check Test Case    ${TESTNAME}
 
+Get Value From User Shortcuts
+    Check Test Case    ${TESTNAME}
+
 Get Selection From User
+    Check Test Case    ${TESTNAME}
+
+Get Selection From User When Default Value Provided by Index
+    Check Test Case    ${TESTNAME}
+
+Get Selection From User When Default Value Provided by String
+    Check Test Case    ${TESTNAME}
+
+Get Selection From User When Default Value Is Integer
+    Check Test Case    ${TESTNAME}
+
+Get Selection From User When Default Value Index Is Out of Bounds
+    Check Test Case    ${TESTNAME}
+
+Get Selection From User When Default Value Cannot Be Found
     Check Test Case    ${TESTNAME}
 
 Get Selection From User Cancelled
@@ -62,4 +80,10 @@ Get Selections From User Exited
     Check Test Case    ${TESTNAME}
 
 Multiple dialogs in a row
+    Check Test Case    ${TESTNAME}
+
+Garbage Collection In Thread Should Not Cause Problems
+    Check Test Case    ${TESTNAME}
+
+Timeout can close dialog
     Check Test Case    ${TESTNAME}

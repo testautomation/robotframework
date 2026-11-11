@@ -44,7 +44,7 @@ Keyword Arguments
     Keyword Arguments Should Be      12    a    b    *args    **kwargs
 
 Non-ASCII Bytes Defaults
-    Keyword Arguments Should Be      6     arg=hyv\\xe4
+    Keyword Arguments Should Be      6     arg=hyvä
 
 Non-ASCII String Defaults
     Keyword Arguments Should Be      9     arg=hyvä
@@ -52,6 +52,14 @@ Non-ASCII String Defaults
 Embedded Arguments
     Keyword Name Should Be           13    Takes \${embedded} \${args}
     Keyword Arguments Should Be      13
+
+Embedded and Normal Arguments
+    Keyword Name Should Be           14    Takes \${embedded} and normal args
+    Keyword Arguments Should Be      14    mandatory    optional=None
+
+Embedded and Positional-only Arguments
+    Keyword Name Should Be           15    Takes \${embedded} and positional-only args
+    Keyword Arguments Should Be      15    mandatory    /    optional=None
 
 Keyword Documentation
     Keyword Doc Should Be            1     A keyword.\n\nSee `get hello` for details.
@@ -92,9 +100,9 @@ Keyword tags
 Keyword source info
     Keyword Name Should Be           0     Get Hello
     Keyword Should Not Have Source   0
-    Keyword Lineno Should Be         0     17
+    Keyword Lineno Should Be         0     15
 
 Keyword source info with decorated function
     Keyword Name Should Be           13    Takes \${embedded} \${args}
     Keyword Should Not Have Source   13
-    Keyword Lineno Should Be         13    71
+    Keyword Lineno Should Be         13    68

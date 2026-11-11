@@ -31,7 +31,7 @@ class Variables:
 
     def __init__(self):
         self.store = VariableStore(self)
-        self._replacer = VariableReplacer(self.store)
+        self._replacer = VariableReplacer(self)
 
     def __setitem__(self, name, value):
         self.store.add(name, value)
@@ -39,16 +39,23 @@ class Variables:
     def __getitem__(self, name):
         return self.store.get(name)
 
+    def __delitem__(self, name):
+        self.store.pop(name)
+
     def __contains__(self, name):
         return name in self.store
+
+    def get(self, name, default=None):
+        return self.store.get(name, default)
 
     def resolve_delayed(self):
         self.store.resolve_delayed()
 
     def replace_list(self, items, replace_until=None, ignore_errors=False):
         if not is_list_like(items):
-            raise ValueError("'replace_list' requires list-like input, "
-                             "got %s." % type_name(items))
+            raise ValueError(
+                f"'replace_list' requires list-like input, got {type_name(items)}."
+            )
         return self._replacer.replace_list(items, replace_until, ignore_errors)
 
     def replace_scalar(self, item, ignore_errors=False):
@@ -61,16 +68,22 @@ class Variables:
         setter = VariableFileSetter(self.store)
         return setter.set(path_or_variables, args, overwrite)
 
-    def set_from_variable_table(self, variables, overwrite=False):
+    def set_from_variable_section(self, variables, overwrite=False):
         setter = VariableTableSetter(self.store)
         setter.set(variables, overwrite)
 
     def clear(self):
         self.store.clear()
 
-    def copy(self):
+    def copy(self, update=None):
         variables = Variables()
         variables.store.data = self.store.data.copy()
+        if update:
+            for name, value in update.items():
+                if value is not None:
+                    variables[name] = value
+                else:
+                    del variables[name]
         return variables
 
     def update(self, variables):

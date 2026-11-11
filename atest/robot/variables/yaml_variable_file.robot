@@ -1,5 +1,5 @@
 *** Settings ***
-Suite Setup      Run Tests    --variablefile ${VARDIR}/cli.yaml -V ${VARDIR}/cli.YML --pythonpath ${VARDIR}
+Suite Setup      Run Tests    --variablefile "${VARDIR}/cli.yaml" -V "${VARDIR}/cli.YML" --pythonpath "${VARDIR}"
 ...              variables/yaml_variable_file.robot
 Force Tags       require-yaml
 Resource         atest_resource.robot
@@ -18,6 +18,12 @@ Non-ASCII strings
     Check Test Case    ${TESTNAME}
 
 Dictionary is dot-accessible
+    Check Test Case    ${TESTNAME}
+
+Nested dictionary is dot-accessible
+    Check Test Case    ${TESTNAME}
+
+Dictionary inside list is dot-accessible
     Check Test Case    ${TESTNAME}
 
 YAML file in PYTHONPATH
@@ -41,8 +47,9 @@ Non-mapping YAML file
 
 YAML files do not accept arguments
     Processing should have failed    2    7    valid.yaml
-    ...    with arguments ? arguments | not | accepted ?${SPACE}
+    ...    with arguments ['arguments', 'not', 'accepted']${SPACE}
     ...    YAML variable files do not accept arguments.
+    ...    pattern=False
 
 Non-existing YAML file
     Importing should have failed    3    8
@@ -55,14 +62,15 @@ YAML with invalid encoding
 
 *** Keywords ***
 Processing should have failed
-    [Arguments]    ${index}    ${lineno}    ${file}    ${arguments}    ${error}
+    [Arguments]    ${index}    ${lineno}    ${file}    ${arguments}    ${error}    ${pattern}=True
     ${path} =    Normalize Path    ${DATADIR}/variables/${file}
     Importing should have failed    ${index}    ${lineno}
     ...    Processing variable file '${path}' ${arguments}failed:
     ...    ${error}
+    ...    pattern=${pattern}
 
 Importing should have failed
-    [Arguments]    ${index}    ${lineno}    @{error}
+    [Arguments]    ${index}    ${lineno}    @{error}    ${pattern}=True
     Error In File    ${index}    variables/yaml_variable_file.robot    ${lineno}
     ...    @{error}
-
+    ...    pattern=${pattern}

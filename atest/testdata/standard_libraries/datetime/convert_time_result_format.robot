@@ -37,6 +37,19 @@ Convert to timedelta
                       ${timedelta(2)}    TIMEdelta    ${timedelta(2)}
                       0.5                timedelta    ${timedelta(microseconds=500000)}
 
+Too large value for timedelta
+                      [Documentation]    FAIL
+                      ...    ValueError: 11574074074 days 1 hour 46 minutes 40 seconds cannot be represented \
+                      ...    as a timedelta object. Values must be between -999999999 and 999999999 days.
+                      1e15               timedelta
+
+Inf and NaN           [Template]         Time conversion should fail
+                      inf                verbose      ValueError: Cannot convert 'inf' to time string.
+                      -INF               compact      ValueError: Cannot convert '-inf' to time string.
+                      nan                timer        ValueError: Cannot convert 'nan' to time string.
+                      inf                timedelta    ValueError: *
+                      NaN                timedelta    ValueError: *
+
 Ignore millis         [Template]         Time conversion without millis should succeed
                       61.5               number       ${62}
                       61.5               verbose      1 minute 2 seconds
@@ -55,12 +68,14 @@ Number is float regardless are millis included or not
                       ${1000.123}        1000.0       ${1}
                       ${1000}            1000.0       no millis
 
-Invalid format        [Documentation]    FAIL ValueError: Unknown format 'invalid'.
-                      10s                invalid      0
+Invalid format        [Documentation]    FAIL
+                      ...    ValueError: Argument 'result_format' got value 'invalid' that cannot be \
+                      ...    converted to 'number', 'verbose', 'compact', 'timer' or 'timedelta'.
+                      10s                invalid
 
 *** Keywords ***
 Time conversion should succeed
-    [Arguments]    ${input}    ${format}    ${expected}
+    [Arguments]    ${input}    ${format}    ${expected}=
     ${result} =    Convert Time    ${input}    ${format}
     Should Be Equal    ${result}    ${expected}
 
@@ -69,7 +84,13 @@ Time conversion without millis should succeed
     ${result} =    Convert Time    ${input}    ${format}    exclude_millis=Yes
     Should Be Equal    ${result}    ${expected}
 
+Time conversion should fail
+    [Arguments]    ${input}    ${format}    ${error}
+    Run Keyword And Expect Error
+    ...    ${error}
+    ...    Convert Time    ${input}    ${format}
+
 Number format should be
     [Arguments]    ${input}    ${expected}    ${millis}
     ${result} =    Convert Time    ${input}    result_format=number    exclude_millis=${millis}
-    Should Be Equal As Strings    ${result}    ${expected}
+    Should Be Equal    ${result}    ${expected}    types=str

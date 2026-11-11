@@ -7,8 +7,10 @@ ${TSV DIR}         ${FORMATS DIR}/tsv
 ${TXT DIR}         ${FORMATS DIR}/txt
 ${ROBOT DIR}       ${FORMATS DIR}/robot
 ${REST DIR}        ${FORMATS DIR}/rest
+${JSON DIR}        ${FORMATS DIR}/json
 ${MIXED DIR}       ${FORMATS DIR}/mixed_data
 ${RESOURCE DIR}    ${FORMATS DIR}/resources
+${MARKDOWN DIR}    ${FORMATS DIR}/markdown
 @{SAMPLE TESTS}    Passing    Failing    User Keyword    Nön-äscïï    Own Tags    Default Tags    Variable Table
 ...                Resource File    Variable File    Library Import    Test Timeout    Keyword Timeout    Empty Rows    Document
 ...                Default Fixture    Overridden Fixture    Quotes    Escaping
@@ -16,7 +18,7 @@ ${RESOURCE DIR}    ${FORMATS DIR}/resources
 
 *** Keywords ***
 Previous Run Should Have Been Successful
-    Should Not Be Equal    ${SUITE}    ${None}    Running tests failed.    No Values
+    Should Not Be Equal    ${SUITE}    ${None}    Running tests failed.    values=False
 
 Run Sample File And Check Tests
     [Arguments]    ${options}    ${path}
@@ -32,7 +34,7 @@ Run Sample File And Check Tests
     ${test} =    Check Test Case    Test Timeout
     Should Be Equal    ${test.timeout}    10 milliseconds
     ${test} =    Check Test Case    Keyword Timeout
-    Should Be Equal    ${test.kws[0].timeout}    2 milliseconds
+    Should Be Equal    ${test[0].timeout}    2 milliseconds
     Check Test Doc    Document    Testing the metadata parsing.
     ${test} =    Check Test Case    Default Fixture
     Setup Should Not Be Defined     ${test}
@@ -51,15 +53,17 @@ Run Suite Dir And Check Results
     Should Contain Suites    ${SUITE.suites[1]}    Sub Suite1    Sub Suite2
     Should Contain Tests    ${SUITE}    @{SAMPLE_TESTS}    @{SUBSUITE_TESTS}
     ${path} =    Normalize Path    ${path}
-    Syslog Should Contain    | INFO \ | Data source '${path}${/}invalid.${type}' has no tests or tasks.
-    Syslog Should Contain    | INFO \ | Data source '${path}${/}empty.${type}' has no tests or tasks.
+    IF    $type != 'json'
+        Syslog Should Contain    | INFO \ | Data source '${path}${/}invalid.${type}' has no tests or tasks.
+        Syslog Should Contain    | INFO \ | Data source '${path}${/}empty.${type}' has no tests or tasks.
+    END
     Syslog Should Contain    | INFO \ | Ignoring file or directory '${path}${/}not_a_picture.jpg'.
 
 Check Suite With Init
     [Arguments]    ${suite}
     Should Be Equal    ${suite.name}    With Init
     Should Be Equal    ${suite.doc}    Testing suite init file
-    Check Log Message    ${suite.setup.kws[0].messages[0]}    Running suite setup
+    Check Log Message    ${suite.setup[0].messages[0]}    Running suite setup
     Teardown Should Not Be Defined    ${suite}
     Should Contain Suites    ${suite}    Sub Suite1    Sub Suite2
     Should Contain Tests    ${suite}    @{SUBSUITE_TESTS}

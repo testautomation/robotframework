@@ -27,6 +27,14 @@ Passing keywords
 Keywords with embedded arguments
     Embedded arguments here
     Embedded args rock here
+    Some embedded and normal args    42
+    Some embedded and normal args    ${does not exist}
+    This is validated
+
+Keywords with types
+    VAR    ${var: int}    1
+    @{x: list[int]} =    Create List    [1, 2]    [2, 3, 4]
+    Keywords with type    1    2
     This is validated
 
 Library keyword with embedded arguments
@@ -36,6 +44,28 @@ Library keyword with embedded arguments
 Keywords that would fail
     Fail    Not actually executed so won't fail.
     Fail In Uk
+    This is validated
+
+Keywords with types that would fail
+    [Documentation]    FAIL    Several failures occurred:
+    ...
+    ...    1) Invalid variable '\${var: kala}': Unrecognized type 'kala'.
+    ...
+    ...    2) Invalid argument specification: Invalid argument '\${arg: bad}': Unrecognized type 'bad'.
+    ...
+    ...    3) ValueError: Argument 'arg' got value 'bad' that cannot be converted to integer.
+    ...
+    ...    4) Invalid variable '\${x: \${type}}': Unrecognized type '\${type}'.
+    ...
+    ...    5) Invalid variable name '$[{type}}'.
+    VAR    ${var: kala}     1
+    VAR    ${var: int}      kala
+    Invalid type            1
+    Keywords with type      bad    value
+    VAR    ${type}          int
+    VAR    ${x: ${type}}    1
+    VAR    ${type}          x: int
+    VAR    $[{type}}        1
     This is validated
 
 Scalar variables are not checked in keyword arguments
@@ -114,16 +144,32 @@ Non-existing keyword name
     This is validated
 
 Invalid syntax in UK
-    [Documentation]    FAIL    Invalid argument specification: Invalid argument syntax '${arg'.
+    [Documentation]    FAIL    Several failures occurred:
+    ...
+    ...    1) Invalid argument specification: Multiple errors:
+    ...    - Invalid argument syntax '\${oops'.
+    ...    - Non-default argument after default arguments.
+    ...
+    ...    2) Invalid argument specification: Multiple errors:
+    ...    - Invalid argument syntax '\${oops'.
+    ...    - Non-default argument after default arguments.
     Invalid Syntax UK
+    Invalid Syntax UK    what    ever    args=accepted
     This is validated
 
 Multiple Failures
-    [Documentation]    FAIL    Several failures occurred:\n\n
-    ...    1) Keyword 'BuiltIn.Should Be Equal' expected 2 to 8 arguments, got 1.\n\n
-    ...    2) Invalid argument specification: Invalid argument syntax '${arg'.\n\n
-    ...    3) Keyword 'Some Return Value' expected 2 arguments, got 3.\n\n
-    ...    4) No keyword with name 'Yet another non-existing keyword' found.\n\n
+    [Documentation]    FAIL    Several failures occurred:
+    ...
+    ...    1) Keyword 'BuiltIn.Should Be Equal' expected 2 to 10 arguments, got 1.
+    ...
+    ...    2) Invalid argument specification: Multiple errors:
+    ...    - Invalid argument syntax '${oops'.
+    ...    - Non-default argument after default arguments.
+    ...
+    ...    3) Keyword 'Some Return Value' expected 2 arguments, got 3.
+    ...
+    ...    4) No keyword with name 'Yet another non-existing keyword' found.
+    ...
     ...    5) No keyword with name 'Does not exist' found.
     Should Be Equal    1
     UK with multiple failures
@@ -140,6 +186,14 @@ Avoid keyword in dry-run
 Embedded ${args} here
     No Operation
 
+Some ${type} and normal args
+    [Arguments]    ${meaning of life}
+    No Operation
+
+Keywords with type
+    [Arguments]    ${arg: int}    ${arg2: str}
+    No Operation
+
 Keyword with Teardown
     No Operation
     [Teardown]    Does not exist
@@ -153,15 +207,19 @@ Keyword with teardown with existing variable
     [Teardown]    ${TEARDOWN}    ${I DO NOT EXIST}
 
 Invalid Syntax UK
-    [Arguments]    ${arg
+    [Arguments]    ${arg}=def    ${oops
+    No Operation
+
+Invalid type
+    [Arguments]    ${arg: bad}
     No Operation
 
 Some Return Value
     [Arguments]    ${a1}    ${a2}
-    [Return]    ${a1}-${a2}
+    RETURN    ${a1}-${a2}
 
 Ooops return value
-    [Return]    ${ooops}
+    RETURN    ${ooops}
 
 UK with multiple failures
     Invalid Syntax UK

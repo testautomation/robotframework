@@ -11,6 +11,10 @@ Custom stdout
     ${result} =    Run Stdout Stderr Process    stdout=${STDOUT}
     Result Should Equal    ${result}    stdout    stderr    stdout_path=${STDOUT}
 
+Custom stdout as `pathlib.Path`
+    ${result} =    Run Stdout Stderr Process    stdout=${{pathlib.Path($STDOUT)}}
+    Result Should Equal    ${result}    stdout    stderr    stdout_path=${STDOUT}
+
 Redirecting stdout to DEVNULL
     ${result} =    Run Stdout Stderr Process    stdout=DEVNULL
     Should Not Exist      ${EXECDIR}/DEVNULL
@@ -20,6 +24,10 @@ Redirecting stdout to DEVNULL
 
 Custom stderr
     ${result} =    Run Stdout Stderr Process    stderr=${STDERR}
+    Result Should Equal    ${result}    stdout    stderr    stderr_path=${STDERR}
+
+Custom stderr as `pathlib.Path`
+    ${result} =    Run Stdout Stderr Process    stderr=${{pathlib.Path($STDERR)}}
     Result Should Equal    ${result}    stdout    stderr    stderr_path=${STDERR}
 
 Custom stdout and stderr
@@ -101,29 +109,50 @@ Run multiple times using custom streams
        Run And Test Once    ${i}    ${STDOUT}    ${STDERR}
     END
 
+Lot of output to stdout and stderr pipes
+    [Tags]    performance
+    VAR    ${code}
+    ...    import sys
+    ...    sys.stdout.write('Hello Robot Framework! ' * 65536)
+    ...    sys.stderr.write('Hello Robot Framework! ' * 65536)
+    ...    separator=;
+    ${result} =    Run Process    python    -c    ${code}
+    Length Should Be    ${result.stdout}    1507328
+    Length Should Be    ${result.stderr}    1507328
+    Should Be Equal    ${result.rc}    ${0}
+
 Read standard streams when they are already closed externally
     Some Process    stderr=${NONE}
     ${stdout} =    Stop Some Process    message=42
     Should Be Equal    ${stdout}    42
     ${process} =    Get Process Object
-    Run Keyword If    not ${process.stdout.closed}
-    ...    Call Method    ${process.stdout}    close
-    Run Keyword If    not ${process.stderr.closed}
-    ...    Call Method    ${process.stderr}    close
+    Should Be True    ${process.stdout.closed}
+    Should Be True    ${process.stderr.closed}
     ${result} =    Wait For Process
-    Should Be Empty    ${result.stdout}${result.stderr}
+    Should Be Equal    ${result.stdout}    42
+    Should Be Equal    ${result.stderr}    ${EMPTY}
+
+Read standard streams when they are already closed externally and only one is PIPE
+    [Documentation]    Popen.communicate() behavior with closed PIPEs is strange.
+    ...                https://github.com/python/cpython/issues/131064
+    ${process} =    Start process    python    -V    stderr=DEVNULL
+    Call method    ${process.stdout}    close
+    ${result} =    Wait for process
+    Should Be Empty    ${result.stdout}
+    Should Be Empty    ${result.stderr}
 
 *** Keywords ***
 Run Stdout Stderr Process
     [Arguments]    ${stdout}=${NONE}    ${stderr}=${NONE}    ${cwd}=${NONE}
     ...    ${stdout_content}=stdout    ${stderr_content}=stderr
-    ${code} =    Catenate    SEPARATOR=;
+    VAR    ${code}
     ...    import sys
     ...    sys.stdout.write('${stdout_content}')
     ...    sys.stderr.write('${stderr_content}')
+    ...    separator=;
     ${result} =    Run Process    python    -c    ${code}
     ...    stdout=${stdout}    stderr=${stderr}    cwd=${cwd}
-    [Return]    ${result}
+    RETURN    ${result}
 
 Run And Test Once
     [Arguments]    ${content}    ${stdout}=${NONE}    ${stderr}=${NONE}

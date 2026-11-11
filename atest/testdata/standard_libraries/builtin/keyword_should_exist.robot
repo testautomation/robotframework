@@ -45,6 +45,10 @@ Keyword does not exist with custom message
     [Documentation]  FAIL Custom message
     Non Existing  Custom message
 
+Recommendations not shown if keyword does not exist
+    [Documentation]  FAIL No keyword with name 'should be eQQual' found.
+    should be eQQual
+
 Duplicate keywords
     [Documentation]  FAIL
     ...  Multiple keywords with name 'Duplicated keyword' found. \
@@ -65,20 +69,26 @@ Empty keyword name
     ${EMPTY}
 
 Non-string keyword name
-    [Documentation]  FAIL Keyword name must be a string.
+    [Documentation]  FAIL No keyword with name '666' found.
     ${42}
-
+    ${666}
 
 *** Keywords ***
 My User Keyword
-    Fail  This is never executed
+    Fail    This is never executed
 
 Duplicate keyword in same resource
+    No Operation
 
 Duplicate keyword in same resource
+    No Operation
 
 No Operation
-    [Documentation]  Override keyword from BuiltIn
+    [Documentation]    Override keyword from BuiltIn
+    No Operation
 
 ${Prefix} this ${keyword:keyword} exists
-    Fail  Not executed
+    Fail    Not executed
+
+42
+    No Operation

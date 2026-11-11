@@ -22,7 +22,7 @@ http://robotframework.org.
 Robot Framework project is hosted on GitHub_ where you can find source code,
 an issue tracker, and some further documentation. Downloads are hosted on PyPI_.
 
-Robot Framework development is sponsored by `Robot Framework Foundation
+Robot Framework development is sponsored by non-profit `Robot Framework Foundation
 <http://robotframework.org/foundation>`_. If you are using the framework
 and benefiting from it, consider joining the foundation to help maintaining
 the framework and developing it further.
@@ -49,10 +49,12 @@ you can simply run::
 For more detailed installation instructions, including installing Python, see
 `<INSTALL.rst>`__.
 
-Robot Framework requires Python 3.6 or newer and runs also on `PyPy <http://pypy.org>`_.
+Robot Framework requires Python 3.8 or newer and runs also on `PyPy <http://pypy.org>`_.
+The latest version that supports Python 3.6 and 3.7 is `Robot Framework 6.1.1`__.
 If you need to use Python 2, `Jython <http://jython.org>`_ or
 `IronPython <http://ironpython.net>`_, you can use `Robot Framework 4.1.3`__.
 
+__ https://github.com/robotframework/robotframework/tree/v6.1.1#readme
 __ https://github.com/robotframework/robotframework/tree/v4.1.3#readme
 
 Example
@@ -113,12 +115,10 @@ Documentation
 Support and Contact
 -------------------
 
-- `Slack <https://robotframework.slack.com/>`_
-  (`click for invite <https://robotframework-slack-invite.herokuapp.com>`__)
+- `Slack <http://slack.robotframework.org/>`_
 - `Forum <https://forum.robotframework.org/>`_
 - `robotframework-users
   <https://groups.google.com/group/robotframework-users/>`_ mailing list
-- `@robotframework <https://twitter.com/robotframework>`_ on Twitter
 
 Contributing
 ------------

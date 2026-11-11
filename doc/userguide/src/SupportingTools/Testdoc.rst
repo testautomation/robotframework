@@ -7,6 +7,12 @@ Test data documentation tool (Testdoc)
    :depth: 1
    :local:
 
+
+.. warning:: The built-in Testdoc tool is deprecated and will be removed in Robot
+             Framework 8.0. Use the `external Testdoc tool`__ instead.
+
+__ https://marvkler.github.io/robotframework-testdoc
+
 Testdoc is Robot Framework's built-in tool for generating high level
 documentation based on test cases. The created documentation is in HTML
 format and it includes name, documentation and other metadata of each

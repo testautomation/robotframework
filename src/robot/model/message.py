@@ -13,10 +13,14 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from robot.utils import html_escape
+from datetime import datetime
+from typing import Literal
+
+from robot.utils import html_escape, setter
 
 from .body import BodyItem
-from .itemlist import ItemList
+
+MessageLevel = Literal["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FAIL", "SKIP"]
 
 
 class Message(BodyItem):
@@ -24,24 +28,35 @@ class Message(BodyItem):
 
     Can be a log message triggered by a keyword, or a warning or an error
     that occurred during parsing or test execution.
-    """
-    type = BodyItem.MESSAGE
-    repr_args = ('message', 'level')
-    __slots__ = ['message', 'level', 'html', 'timestamp']
 
-    def __init__(self, message='', level='INFO', html=False, timestamp=None, parent=None):
-        #: The message content as a string.
+    ``message`` is ``None`` only if explicitly set by listeners to remove messages
+    altogether. When working with results after execution, ``mesasage`` is always
+    a string.
+    """
+
+    type = BodyItem.MESSAGE
+    repr_args = ("message", "level")
+    __slots__ = ("message", "level", "html", "_timestamp")
+
+    def __init__(
+        self,
+        message: "str | None" = "",
+        level: MessageLevel = "INFO",
+        html: bool = False,
+        timestamp: "datetime | str | None" = None,
+        parent: "BodyItem | None" = None,
+    ):
         self.message = message
-        #: Severity of the message. Either ``TRACE``, ``DEBUG``, ``INFO``,
-        #: ``WARN``, ``ERROR``, ``FAIL`` or ``SKIP`. The last two are only used
-        #: with keyword failure messages.
         self.level = level
-        #: ``True`` if the content is in HTML, ``False`` otherwise.
         self.html = html
-        #: Timestamp in format ``%Y%m%d %H:%M:%S.%f``.
         self.timestamp = timestamp
-        #: The object this message was triggered by.
         self.parent = parent
+
+    @setter
+    def timestamp(self, timestamp: "datetime | str | None") -> "datetime | None":
+        if isinstance(timestamp, str):
+            return datetime.fromisoformat(timestamp)
+        return timestamp
 
     @property
     def html_message(self):
@@ -51,19 +66,25 @@ class Message(BodyItem):
     @property
     def id(self):
         if not self.parent:
-            return 'm1'
-        return '%s-m%d' % (self.parent.id, self.parent.messages.index(self) + 1)
+            return "m1"
+        if hasattr(self.parent, "messages"):
+            messages = self.parent.messages
+        else:
+            messages = self.parent.body.filter(messages=True)
+        index = messages.index(self) if self in messages else len(messages)
+        return f"{self.parent.id}-m{index + 1}"
 
     def visit(self, visitor):
         """:mod:`Visitor interface <robot.model.visitor>` entry-point."""
         visitor.visit_message(self)
 
+    def to_dict(self):
+        data = {"message": self.message, "level": self.level}
+        if self.html:
+            data["html"] = True
+        if self.timestamp:
+            data["timestamp"] = self.timestamp.isoformat()
+        return data
+
     def __str__(self):
         return self.message
-
-
-class Messages(ItemList):
-    __slots__ = []
-
-    def __init__(self, message_class=Message, parent=None, messages=None):
-        ItemList.__init__(self, message_class, {'parent': parent}, messages)

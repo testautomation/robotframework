@@ -4,7 +4,7 @@ Creating test cases
 ===================
 
 This section describes the overall test case syntax. Organizing test
-cases into `test suites`_ using `test case files`_ and `test suite
+cases into `test suites`_ using `suite files`_ and `suite
 directories`_ is discussed in the next section.
 
 When using Robot Framework for other automation purposes than test
@@ -81,6 +81,9 @@ below and explained later in this section.
 `[Tags]`:setting:
     Used for `tagging test cases`_.
 
+`[Metadata]`:setting:
+    Used for setting `free test metadata`_ as name-value pairs.
+
 `[Setup]`:setting:, `[Teardown]`:setting:
    Specify `test setup and teardown`_.
 
@@ -115,11 +118,11 @@ The Setting section can have the following test case related
 settings. These settings are mainly default values for the
 test case specific settings listed earlier.
 
-`Force Tags`:setting:, `Default Tags`:setting:
-   The forced and default values for tags_.
-
 `Test Setup`:setting:, `Test Teardown`:setting:
    The default values for `test setup and teardown`_.
+
+`Test Tags`:setting:
+   Tags_ all tests in the suite will get in addition to their possible own tags.
 
 `Test Template`:setting:
    The default `template keyword`_ to use.
@@ -233,7 +236,7 @@ The named argument syntax makes using arguments with `default values`_ more
 flexible, and allows explicitly labeling what a certain argument value means.
 Technically named arguments work exactly like `keyword arguments`__ in Python.
 
-__ http://docs.python.org/tutorial/controlflow.html#keyword-arguments
+__ https://docs.python.org/tutorial/controlflow.html#keyword-arguments
 
 Basic syntax
 ''''''''''''
@@ -373,7 +376,7 @@ visible literally. For example, both `foo=${bar}` and `${foo}=${bar}` are
 valid, as long as the variables that are used exist. An extra limitation is
 that free argument names must always be strings.
 
-__ http://docs.python.org/tutorial/controlflow.html#keyword-arguments
+__ https://docs.python.org/tutorial/controlflow.html#keyword-arguments
 __ `Where named arguments are supported`_
 __ `Free keyword arguments (**kwargs)`_
 __ `Free named arguments with user keywords`_
@@ -425,12 +428,11 @@ __ `Named arguments with variables`_
 Named-only arguments
 ~~~~~~~~~~~~~~~~~~~~
 
-Starting from Robot Framework 3.1, keywords can accept argument that must
+Keywords can accept arguments that must
 always be named using the `named argument syntax`_. If, for example,
 a keyword would accept a single named-only argument `example`, it would
 always need to be used like `example=value` and using just `value` would
-not work. This syntax is inspired by the `keyword-only arguments`__
-syntax supported by Python 3.
+not work. This syntax is inspired by Python's `keyword-only arguments`__ syntax.
 
 For most parts named-only arguments work the same way as `named arguments`_.
 The main difference is that libraries implemented with Python 2 using
@@ -478,8 +480,8 @@ use special `continuable failures`__ if stopping test execution is not desired.
 
 __ `Continue on failure`_
 
-Error messages
-~~~~~~~~~~~~~~
+Error message
+~~~~~~~~~~~~~
 
 The error message assigned to a failed test case is got directly from the
 failed keyword. Often the error message is created by the keyword itself, but
@@ -535,45 +537,40 @@ the variable does not exist, its name is left unchanged.
     Amount cannot be larger than ${MAX AMOUNT}
         # ...
 
-The :setting:`[Documentation]` setting allows you to set a free
+The :setting:`[Documentation]` setting allows setting free form
 documentation for a test case. That text is shown in the command line
-output, as well as the resulting test logs and test reports.
-It is possible to use simple `HTML formatting`_ in documentation and
-variables_ can be used to make the documentation dynamic. Possible
-non-existing variables are left unchanged.
-
-If documentation is split into multiple columns, cells in one row are
-concatenated together with spaces. If documentation is `split
-into multiple rows`__, the created documentation lines themselves are
-`concatenated using newlines`__. Newlines are not added if a line
-already ends with a newline or an `escaping backslash`__.
+output and in the resulting logs and reports.
+If documentation gets long, it can be `split into multiple rows`__.
+It is possible to use simple `HTML formatting`_ and variables_ can
+be used to make the documentation dynamic. Possible non-existing
+variables are left unchanged.
 
 __ `Dividing data to several rows`_
-__ `Newlines in test data`_
-__ `Escaping`_
 
 .. sourcecode:: robotframework
 
    *** Test Cases ***
    Simple
-       [Documentation]    Simple documentation
+       [Documentation]    Simple and short documentation.
+       No Operation
+
+   Multiple lines
+       [Documentation]    First row of the documentation.
+       ...
+       ...                Documentation continues here. These rows form
+       ...                a paragraph when shown in HTML outputs.
        No Operation
 
    Formatting
-       [Documentation]    *This is bold*, _this is italic_  and here is a link: http://robotframework.org
+       [Documentation]
+       ...    This list has:
+       ...    - *bold*
+       ...    - _italics_
+       ...    - link: http://robotframework.org
        No Operation
 
    Variables
        [Documentation]    Executed at ${HOST} by ${USER}
-       No Operation
-
-   Splitting
-       [Documentation]    This documentation    is split    into multiple columns
-       No Operation
-
-   Many lines
-       [Documentation]    Here we have
-       ...                an automatic newline
        No Operation
 
 It is important that test cases have clear and descriptive names, and
@@ -581,8 +578,43 @@ in that case they normally do not need any documentation. If the logic
 of the test case needs documenting, it is often a sign that keywords
 in the test case need better names and they are to be enhanced,
 instead of adding extra documentation. Finally, metadata, such as the
-environment and user information in the last example above, is often
-better specified using tags_.
+environment and user information in the last example above, can also
+be specified as `free test metadata`_ or using tags_, depending on the
+use case.
+
+Free test metadata
+------------------
+
+In addition to documentation, test cases can also have free metadata. This
+metadata is defined as name-value pairs using the :setting:`[Metadata]`
+setting in the test case, similarly as `free suite metadata`_ is defined
+for test suites.
+
+Name of the metadata is the first argument given to the :setting:`[Metadata]`
+setting and the remaining arguments specify its value. The value is handled
+similarly as `test case documentation`_, which means that it supports
+`HTML formatting`_ and variables_, and that longer values can be `split into
+multiple rows`__. A test case can have any number of :setting:`[Metadata]`
+settings, and each of them adds one name-value pair.
+
+__ `Dividing data to several rows`_
+
+.. sourcecode:: robotframework
+
+   *** Test Cases ***
+   Example
+       [Metadata]    Owner              John Doe
+       [Metadata]    Environment        Staging
+       [Metadata]    Longer Value
+       ...           Longer metadata values can be split into multiple
+       ...           rows. Also *simple* _formatting_ is supported.
+       No Operation
+
+Test metadata is shown in reports and logs similarly as test documentation.
+It is also stored in `output files`_ and is available to `listeners`_
+and other tools that process execution results.
+
+.. note:: Test case metadata is new in Robot Framework 7.5.
 
 .. _test case tags:
 
@@ -590,85 +622,178 @@ Tagging test cases
 ------------------
 
 Using tags in Robot Framework is a simple, yet powerful mechanism for
-classifying test cases. Tags are free text and they can be used at
-least for the following purposes:
+classifying test cases and also `user keywords`_. Tags are free text and
+Robot Framework itself has no special meaning for them except for the
+`reserved tags`_ discussed below. Tags can be used at least for the following
+purposes:
 
-- Tags are shown in test reports_, logs_ and, of course, in the test
+- They are shown in test reports_, logs_ and, of course, in the test
   data, so they provide metadata to test cases.
-- Statistics__ about test cases (total, passed, failed  are
-  automatically collected based on tags).
-- With tags, you can `include or exclude`__ test cases to be executed.
-- With tags, you can specify which test cases should be skipped_.
+- Statistics__ about test cases (total, passed, failed and skipped) are
+  automatically collected based on them.
+- They can be used to `include and exclude`__ as well as to skip_ test cases.
 
 __ `Configuring statistics`_
 __ `By tag names`_
 
-In this section it is only explained how to set tags for test
-cases, and different ways to do it are listed below. These
-approaches can naturally be used together.
+There are multiple ways how to specify tags for test cases explained below:
 
-`Force Tags`:setting: in the Setting section
-   All test cases in a test case file with this setting always get
-   specified tags. If it is used in the `test suite initialization file`,
-   all test cases in sub test suites get these tags.
+`Test Tags`:setting: setting in the Settings section
+   All tests in a test case file with this setting always get specified tags.
+   If this setting is used in a `suite initialization file`_, all tests
+   in child suites get these tags.
 
-`Default Tags`:setting: in the Setting section
-   Test cases that do not have a :setting:`[Tags]` setting of their own
-   get these tags. Default tags are not supported in test suite initialization
-   files.
-
-`[Tags]`:setting: in the Test Case section
-   A test case always gets these tags. Additionally, it does not get the
-   possible tags specified with :setting:`Default Tags`, so it is possible
-   to override the :setting:`Default Tags` by using empty value. It is
-   also possible to use value `NONE` to override default tags.
+`[Tags]`:setting: setting with each test case
+   Tests get these tags in addition to tags specified using the :setting:`Test Tags`
+   setting. The :setting:`[Tags]` setting also allows removing tags set with
+   :setting:`Test Tags` by using the `-tag` syntax.
 
 `--settag`:option: command line option
-   All executed test cases get tags set with this option in addition
-   to tags they got elsewhere.
+   All tests get tags set with this option in addition to tags they got elsewhere.
 
 `Set Tags`:name:, `Remove Tags`:name:, `Fail`:name: and `Pass Execution`:name: keywords
    These BuiltIn_ keywords can be used to manipulate tags dynamically
    during the test execution.
 
-Tags are free text, but they are normalized so that they are converted
-to lowercase and all spaces are removed. If a test case gets the same tag
-several times, other occurrences than the first one are removed. Tags
-can be created using variables, assuming that those variables exist.
+Example:
 
 .. sourcecode:: robotframework
 
    *** Settings ***
-   Force Tags      req-42
-   Default Tags    owner-john    smoke
+   Test Tags       requirement: 42    smoke
 
    *** Variables ***
    ${HOST}         10.0.1.42
 
    *** Test Cases ***
    No own tags
-       [Documentation]    This test has tags owner-john, smoke and req-42.
+       [Documentation]    Test has tags 'requirement: 42' and 'smoke'.
        No Operation
 
-   With own tags
-       [Documentation]    This test has tags not_ready, owner-mrx and req-42.
-       [Tags]    owner-mrx    not_ready
+   Own tags
+       [Documentation]    Test has tags 'requirement: 42', 'smoke' and 'not ready'.
+       [Tags]    not ready
        No Operation
 
-   Own tags with variables
-       [Documentation]    This test has tags host-10.0.1.42 and req-42.
-       [Tags]    host-${HOST}
+   Own tags with variable
+       [Documentation]    Test has tags 'requirement: 42', 'smoke' and 'host: 10.0.1.42'.
+       [Tags]    host: ${HOST}
        No Operation
 
-   Empty own tags
-       [Documentation]    This test has only tag req-42.
-       [Tags]
+   Remove common tag
+       [Documentation]    Test has only tag 'requirement: 42'.
+       [Tags]    -smoke
        No Operation
 
-   Set Tags and Remove Tags Keywords
-       [Documentation]    This test has tags mytag and owner-john.
-       Set Tags    mytag
-       Remove Tags    smoke    req-*
+   Remove common tag using a pattern
+       [Documentation]    Test has only tag 'smoke'.
+       [Tags]    -requirement: *
+       No Operation
+
+   Set Tags and Remove Tags keywords
+       [Documentation]    This test has tags 'smoke', 'example' and 'another'.
+       Set Tags    example    another
+       Remove Tags    requirement: *
+
+As the example shows, tags can be created using variables, but otherwise they
+preserve the exact name used in the data. When tags are compared, for example,
+to collect statistics, to select test to be executed, or to remove duplicates,
+comparisons are case, space and underscore insensitive.
+
+As demonstrated by the above examples, removing tags using `-tag` syntax supports
+`simple patterns`_ like `-requirement: *`. Tags starting with a hyphen have no
+special meaning otherwise than with the :setting:`[Tags]` setting. If there is
+a need to set a tag starting with a hyphen with :setting:`[Tags]`, it is possible
+to use the escaped__ format like `\-tag`.
+
+At the moment the `-tag` syntax can be used for removing tags only with the
+:setting:`[Tags]` setting, but the plan is to support this functionality also
+with the :setting:`Test Tags` setting in Robot Framework 8.0 (`#5250`__).
+Setting tags having a literal value that starts with a hyphen in :setting:`Test Tags`
+was deprecated in Robot Framework 7.2 (`#5252`__). The escaped format like `\-tag`
+can be used if tags with such values are needed.
+
+.. note:: The :setting:`Test Tags` setting is new in Robot Framework 6.0.
+          Earlier versions support :setting:`Force Tags` and :setting:`Default Tags`
+          settings discussed in the next section.
+
+.. note:: The `-tag` syntax for removing tags using the :setting:`[Tags]` setting
+          is new in Robot Framework 7.0.
+
+__ escaping_
+__ https://github.com/robotframework/robotframework/issues/5250
+__ https://github.com/robotframework/robotframework/issues/5252
+
+Deprecation of :setting:`Force Tags` and :setting:`Default Tags`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Prior to Robot Framework 6.0, tags could be specified to tests in the Setting section
+using two different settings:
+
+:setting:`Force Tags`
+    All tests unconditionally get these tags. This is exactly the same as
+    :setting:`Test Tags` nowadays.
+
+:setting:`Default Tags`
+    All tests get these tags by default. If a test has :setting:`[Tags]`,
+    it will not get these tags.
+
+Both of these settings still work, but they are considered deprecated.
+A visible deprecation warning will be added in the future, most likely
+in Robot Framework 8.0, and eventually these settings will be removed.
+Tools like Tidy__ can be used to ease transition.
+
+Updating :setting:`Force Tags` requires only renaming it to :setting:`Test Tags`.
+The :setting:`Default Tags` setting will be removed altogether, but the `-tag`
+functionality introduced in Robot Framework 7.0 provides same underlying
+functionality. The following examples demonstrate the needed changes.
+
+Old syntax:
+
+.. sourcecode:: robotframework
+
+    *** Settings ***
+    Force Tags      all
+    Default Tags    default
+
+    *** Test Cases ***
+    Common only
+        [Documentation]    Test has tags 'all' and 'default'.
+        No Operation
+
+    No default
+        [Documentation]    Test has only tag 'all'.
+        [Tags]
+        No Operation
+
+    Own and no default
+        [Documentation]    Test has tags 'all' and 'own'.
+        [Tags]    own
+        No Operation
+
+New syntax:
+
+.. sourcecode:: robotframework
+
+    *** Settings ***
+    Test Tags      all    default
+
+    *** Test Cases ***
+    Common only
+        [Documentation]    Test has tags 'all' and 'default'.
+        No Operation
+
+    No default
+        [Documentation]    Test has only tag 'all'.
+        [Tags]    -default
+        No Operation
+
+    Own and no default
+        [Documentation]    Test has tags 'all' and 'own'.
+        [Tags]    own    -default
+        No Operation
+
+__ https://robotidy.readthedocs.io
 
 Reserved tags
 ~~~~~~~~~~~~~
@@ -679,19 +804,53 @@ Framework itself, and using them for other purposes can have unexpected
 results. All special tags Robot Framework has and will have in the future
 have the `robot:` prefix. To avoid problems, users should thus not use any
 tag with this prefixes unless actually activating the special functionality.
+The current reserved tags are listed below, but more such tags are likely
+to be added in the future.
 
-At the time of writing, the only special tags are `robot:exit`, that is
-automatically added to tests when `stopping test execution gracefully`_,
-and `robot:no-dry-run`, that can be used to disable the `dry run`_ mode as
-well as `robot:continue-on-failure` which controls continuable execution.
-More usages are likely to be added in the future.
+`robot:continue-on-failure` and `robot:recursive-continue-on-failure`
+    Used for `enabling the continue-on-failure mode`__.
 
-As of RobotFramework 4.1, reserved tags are suppressed by default in the
-test suite's tag statistics. They will be shown when they are explicitly
-included via the `--tagstatinclude 'robot:*'` command line option.
+`robot:stop-on-failure` and `robot:recursive-stop-on-failure`
+    Used for `disabling the continue-on-failure mode`__.
 
-As of RobotFramework 5.0, new reserved tags include `robot:skip`, 
-`robot:skip-on-failure` and `robot:exclude`. 
+`robot:exit-on-failure`
+    Stop the whole execution if a `test with this tag fails`__.
+
+`robot:skip-on-failure`
+    Mark test to be `skipped if it fails`__.
+
+`robot:skip`
+    Mark test to be `unconditionally skipped`__.
+
+`robot:exclude`
+    Mark test to be `unconditionally excluded`__.
+
+`robot:private`
+    Mark keyword to be private__.
+
+`robot:no-dry-run`
+    Mark keyword not to be executed in the `dry run`_ mode.
+
+`robot:exit`
+    Added to tests automatically when `execution is stopped gracefully`__.
+
+`robot:flatten`
+    Enable `flattening keyword during execution time`_.
+
+__ `Enabling continue-on-failure using tags`_
+__ `Disabling continue-on-failure using tags`_
+__ `Stopping using robot:exit-on-failure tag`_
+__ `Automatically skipping failed tests`_
+__ `Skipping before execution`_
+__ `By tag names`_
+__ `Private user keywords`_
+__ `stopping test execution gracefully`_
+
+As of RobotFramework 4.1, reserved tags are suppressed by default in
+`tag statistics`__. They will be shown when they are explicitly
+included via the `--tagstatinclude robot:*` command line option.
+
+__ `Configuring statistics`_
 
 Test setup and teardown
 -----------------------
@@ -702,7 +861,7 @@ that is executed before a test case, and a test teardown is executed
 after a test case. In Robot Framework setups and teardowns are just
 normal keywords with possible arguments.
 
-Setup and teardown are always a single keyword. If they need to take care
+A setup and a teardown are always a single keyword. If they need to take care
 of multiple separate tasks, it is possible to create higher-level `user
 keywords`_ for that purpose. An alternative solution is executing multiple
 keywords using the BuiltIn_ keyword :name:`Run Keywords`.
@@ -792,7 +951,7 @@ functionally fully identical.
 
 .. sourcecode:: robotframework
 
-   *** Test Cases **
+   *** Test Cases ***
    Normal test case
        Example keyword    first argument    second argument
 
@@ -810,13 +969,18 @@ an empty value for :setting:`[Template]` means that the test has no
 template even when :setting:`Test Template` is used. It is also possible
 to use value `NONE` to indicate that a test has no template.
 
+Using keywords with `default values`_ or accepting `variable number of arguments`_,
+as well as using `named arguments`_ and `free named arguments`_, work with templates
+exactly like they work otherwise. Using variables_ in arguments is also
+supported normally.
+
+Templates with multiple iterations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 If a templated test case has multiple data rows in its body, the template
 is applied for all the rows one by one. This
 means that the same keyword is executed multiple times, once with data
-on each row. Templated tests are also special so that all the rounds
-are executed even if one or more of them fails. It is possible to use this
-kind of `continue on failure`_ mode with normal tests too, but with
-the templated tests the mode is on automatically.
+on each row.
 
 .. sourcecode:: robotframework
 
@@ -829,10 +993,25 @@ the templated tests the mode is on automatically.
        second round 1    second round 2
        third round 1     third round 2
 
-Using keywords with `default values`_ or accepting `variable number of arguments`_,
-as well as using `named arguments`_ and `free named arguments`_, work with templates
-exactly like they work otherwise. Using variables_ in arguments is also
-supported normally.
+Templated tests are special so that all iterations are executed even if one
+or more of them is failed or skipped. The aggregated result of a templated
+test with multiple iterations is:
+
+- FAIL if any of the iterations failed.
+- PASS if there were no failures and at least one iteration passed.
+- SKIP if all iterations were skipped.
+
+.. note:: It is possible to use the `continue on failure`_ mode also with normal
+          tests, but with the templated tests the mode is on automatically. If
+          needed, the mode can also be disabled__ with templates by using the
+          `robot:stop-on-failure` tag.
+
+.. note:: Running all iterations if one or more is skipped is new in Robot
+          Framework 7.2. With earlier versions the execution stopped for the
+          first skipped iteration and the test got the SKIP status regardless
+          of the status of the earlier iterations.
+
+__ `Disabling continue-on-failure using tags`_
 
 Templates with embedded arguments
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1026,25 +1205,26 @@ than one action.
        and credentials are submitted
        Then welcome page should be open
 
-__ http://testobsessed.com/2008/12/08/acceptance-test-driven-development-atdd-an-overview
-__ http://en.wikipedia.org/wiki/Specification_by_example
-__ http://en.wikipedia.org/wiki/Behavior_Driven_Development
+__ https://en.wikipedia.org/wiki/Acceptance_test-driven_development
+__ https://en.wikipedia.org/wiki/Specification_by_example
+__ https://en.wikipedia.org/wiki/Behavior_Driven_Development
 
 Ignoring :name:`Given/When/Then/And/But` prefixes
 '''''''''''''''''''''''''''''''''''''''''''''''''
 
 Prefixes :name:`Given`, :name:`When`, :name:`Then`, :name:`And` and :name:`But`
-are dropped when matching keywords are searched, if no match with the full name
-is found. This works for both user keywords and library keywords. For example,
-:name:`Given login page is open` in the above example can be implemented as
-user keyword either with or without the word :name:`Given`. Ignoring prefixes
-also allows using the same keyword with different prefixes. For example
-:name:`Welcome page should be open` could also used as :name:`And welcome page
-should be open`.
+can be omitted when creating keywords. For example, :name:`Given login page is open`
+in the above example is typically implemented without the word :name:`Given`
+so that the name is just :name:`Login page is open`. Omitting prefixes allows using
+the same keyword with different prefixes. For example, :name:`Welcome page
+should be open` could be used as :name:`Then welcome page should be open` or
+:name:`and welcome page should be open`.
+
+.. note:: These prefixes can be localized_. See the Translations_ appendix
+          for supported translations.
 
 Embedding data to keywords
 ''''''''''''''''''''''''''
 
 When writing concrete examples it is useful to be able to pass actual data to
-keyword implementations. User keywords support this by allowing `embedding
-arguments into keyword name`_.
+keyword implementations. This can be done by `embedding arguments into keyword name`_.

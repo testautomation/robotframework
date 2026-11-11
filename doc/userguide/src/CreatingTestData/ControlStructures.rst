@@ -176,7 +176,7 @@ a certain number of times. For this purpose Robot Framework has a special
 `FOR index IN RANGE limit` loop syntax that is derived from the similar Python
 idiom using the `built-in range() function`__.
 
-__ http://docs.python.org/library/functions.html#func-range
+__ https://docs.python.org/library/functions.html#func-range
 
 Similarly as other `FOR` loops, the `FOR-IN-RANGE` loop starts with
 `FOR` that is followed by a loop variable. In this format
@@ -244,7 +244,7 @@ inside the list. Robot Framework has a special
 `FOR index ... IN ENUMERATE ...` syntax for this situation.
 This syntax is derived from the `Python built-in enumerate() function`__.
 
-__ http://docs.python.org/library/functions.html#enumerate
+__ https://docs.python.org/library/functions.html#enumerate
 
 `FOR-IN-ENUMERATE` loops syntax is just like the regular `FOR` loop syntax,
 except that the separator between variables and values is `IN ENUMERATE`
@@ -303,7 +303,7 @@ the number of loop-variables (excluding the index variable):
 
 .. sourcecode:: robotframework
 
-   *** Test Case ***
+   *** Test Cases ***
    FOR-IN-ENUMERATE with two values per iteration
        FOR    ${index}    ${en}    ${fi}    IN ENUMERATE
        ...    cat      kissa
@@ -317,7 +317,7 @@ will become a Python tuple containing the index and the iterated value:
 
 .. sourcecode:: robotframework
 
-   *** Test Case ***
+   *** Test Cases ***
    FOR-IN-ENUMERATE with one loop variable
        FOR    ${x}    IN ENUMERATE    @{LIST}
            Length Should Be    ${x}    2
@@ -334,7 +334,7 @@ Some tests build up several related lists, then loop over them together.
 Robot Framework has a shortcut for this case: `FOR ... IN ZIP ...`, which
 is derived from the `Python built-in zip() function`__.
 
-__ http://docs.python.org/library/functions.html#zip
+__ https://docs.python.org/library/functions.html#zip
 
 This may be easiest to show with an example:
 
@@ -358,10 +358,9 @@ This may be easiest to show with an example:
 
 As the example above illustrates, `FOR-IN-ZIP` loops require their own custom
 separator `IN ZIP` (case-sensitive) between loop variables and values.
-Values used with `FOR-IN-ZIP` loops must be lists or list-like objects. Looping
-will stop when the shortest list is exhausted.
+Values used with `FOR-IN-ZIP` loops must be lists or list-like objects.
 
-Lists to iterate over must always be given either as `scalar variables`_ like
+Items to iterate over must always be given either as `scalar variables`_ like
 `${items}` or as `list variables`_ like `@{lists}` that yield the actual
 iterated lists. The former approach is more common and it was already
 demonstrated above. The latter approach works like this:
@@ -380,7 +379,7 @@ demonstrated above. The latter approach works like this:
        END
 
 The number of lists to iterate over is not limited, but it must match
-the number of loop variables. Alternatively there can be just one loop
+the number of loop variables. Alternatively, there can be just one loop
 variable that then becomes a Python tuple getting items from all lists.
 
 .. sourcecode:: robotframework
@@ -388,7 +387,7 @@ variable that then becomes a Python tuple getting items from all lists.
    *** Variables ***
    @{ABC}           a    b    c
    @{XYZ}           x    y    z
-   @{NUM}           1    2    3    4    5
+   @{NUM}           1    2    3
 
    *** Test Cases ***
    FOR-IN-ZIP with multiple lists
@@ -402,13 +401,63 @@ variable that then becomes a Python tuple getting items from all lists.
            Log Many    ${items}[0]    ${items}[1]    ${items}[2]
        END
 
-If lists have an unequal number of items, the shortest list defines how
-many iterations there are and values at the end of longer lists are ignored.
-For example, the above examples loop only three times and values `4` and `5`
-in the `${NUM}` list are ignored.
+Starting from Robot Framework 6.1, it is possible to configure what to do if
+lengths of the iterated items differ. By default, the shortest item defines how
+many iterations there are and values at the end of longer ones are ignored.
+This can be changed by using the `mode` option that has three possible values:
 
-.. note:: Getting lists to iterate over from list variables and using
-          just one loop variable are new features in Robot Framework 3.2.
+- `STRICT`: Items must have equal lengths. If not, execution fails. This is
+  the same as using `strict=True` with Python's zip__ function.
+- `SHORTEST`: Items in longer items are ignored. Infinite iterators are supported
+  in this mode as long as one of the items is exhausted. This is the default
+  behavior.
+- `LONGEST`: The longest item defines how many iterations there are. Missing
+  values in shorter items are filled-in with value specified using the `fill`
+  option or `None` if it is not used. This is the same as using Python's
+  zip_longest__ function except that it has `fillvalue` argument instead of
+  `fill`.
+
+All these modes are illustrated by the following examples:
+
+.. sourcecode:: robotframework
+
+   *** Variables ***
+   @{CHARACTERS}     a    b    c    d    f
+   @{NUMBERS}        1    2    3
+
+   *** Test Cases ***
+   STRICT mode
+       [Documentation]    This loop fails due to lists lengths being different.
+       FOR    ${c}    ${n}    IN ZIP    ${CHARACTERS}    ${NUMBERS}    mode=STRICT
+           Log    ${c}: ${n}
+       END
+
+   SHORTEST mode
+       [Documentation]    This loop executes three times.
+       FOR    ${c}    ${n}    IN ZIP    ${CHARACTERS}    ${NUMBERS}    mode=SHORTEST
+           Log    ${c}: ${n}
+       END
+
+   LONGEST mode
+       [Documentation]    This loop executes five times.
+       ...                On last two rounds `${n}` has value `None`.
+       FOR    ${c}    ${n}    IN ZIP    ${CHARACTERS}    ${NUMBERS}    mode=LONGEST
+           Log    ${c}: ${n}
+       END
+
+   LONGEST mode with custom fill value
+       [Documentation]    This loop executes five times.
+       ...                On last two rounds `${n}` has value `0`.
+       FOR    ${c}    ${n}    IN ZIP    ${CHARACTERS}    ${NUMBERS}    mode=LONGEST    fill=0
+           Log    ${c}: ${n}
+       END
+
+.. note:: The behavior if list lengths differ will change in the future
+          so that the `STRICT` mode will be the default. If that is not desired,
+          the `SHORTEST` mode needs to be used explicitly.
+
+__ https://docs.python.org/library/functions.html#zip
+__ https://docs.python.org/library/itertools.html#itertools.zip_longest
 
 Dictionary iteration
 ~~~~~~~~~~~~~~~~~~~~
@@ -485,6 +534,28 @@ requires using dictionaries as `list variables`_:
           Robot Framework 3.2. With earlier version it is possible to iterate
           over dictionary keys like the last example above demonstrates.
 
+Loop variable conversion
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+`Variable type conversion`_ works also with FOR loop variables. The desired type
+can be added to any loop variable by using the familiar `${name: type}` syntax.
+
+.. sourcecode:: robotframework
+
+   *** Test Cases ***
+   Variable conversion
+       FOR    ${value: bytes}    IN    Hello!    Hyvä!    \x00\x00\x07
+           Log    ${value}    formatter=repr
+       END
+       FOR    ${index}    ${date: date}    IN ENUMERATE   2023-06-15    2025-05-30    today
+           Log    ${date}     formatter=repr
+       END
+       FOR    ${item: tuple[str, date]}    IN ENUMERATE   2023-06-15    2025-05-30    today
+           Log    ${item}     formatter=repr
+       END
+
+.. note:: Variable type conversion is new in Robot Framework 7.3.
+
 Removing unnecessary keywords from outputs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -533,7 +604,7 @@ Basic `WHILE` syntax
 
     *** Test Cases ***
     Example
-        ${rc} =   Set Variable    1
+        VAR    ${rc}   1
         WHILE    ${rc} != 0
             ${rc} =    Keyword that returns zero on success
         END
@@ -547,24 +618,30 @@ The latter approach is handy when the string representation of the variable cann
 used in the condition directly. For example, strings require quoting and multiline
 strings and string themselves containing quotes cause additional problems. See the
 `Evaluating expressions`_ appendix for more information and examples related to
-the evaluation syntax
+the evaluation syntax.
+
+Starting from Robot Framework 6.1, the condition in a `WHILE` statement can be omitted.
+This is interpreted as the condition always being true, which may be useful with the
+`limit` option described below.
 
 Limiting `WHILE` loop iterations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 With `WHILE` loops, there is always a possibility to achieve an infinite loop,
 either by intention or by mistake. This happens when the loop condition never
-becomes false. While infinite loops have some utility in application programming,
+becomes false. Although infinite loops have some utility in application programming,
 in automation an infinite loop is rarely a desired outcome. If such a loop occurs
 with Robot Framework, the execution must be forcefully stopped and no log or report
 can be created. For this reason, `WHILE` loops in Robot Framework have a default
 limit of 10 000 iterations. If the limit is exceeded, the loop fails.
 
-The limit can be changed with the `limit` configuration parameter. Valid values
-are positive integers denoting iteration count and `time strings`__ like `10s` or
-`1 hour 10 minutes` denoting maximum iteration time. The limit can also be disabled
-altogether by using `NONE` (case-insensitive). All these options are illustrated
-by the examples below.
+The limit can be set with the `limit` configuration parameter either as a maximum
+iteration count or as a maximum time for the whole loop. When the limit is an
+iteration count, it is possible to use just integers like `100` and to add `times`
+or `x` suffix after the value like `100 times`. When the limit is a timeout,
+it is possible to use `time strings`__ like `10 s` or `1 hour 10 minutes`.
+The limit can also be disabled altogether by using `NONE` (case-insensitive).
+All these options are illustrated by the examples below.
 
 .. sourcecode:: robotframework
 
@@ -572,6 +649,12 @@ by the examples below.
     Limit as iteration count
         WHILE    True    limit=100
             Log    This is run 100 times.
+        END
+        WHILE    True    limit=10 times
+            Log    This is run 10 times.
+        END
+        WHILE    True    limit=42x
+            Log    This is run 42 times.
         END
 
     Limit as time
@@ -581,12 +664,55 @@ by the examples below.
 
     No limit
         WHILE    True    limit=NONE
-            Log    This must be forcefully stopped.
+            Log    This runs forever.
         END
+
+.. note:: Support for using `times` and `x` suffixes with iteration counts
+          is new in Robot Framework 7.0.
 
 Keywords in a loop are not forcefully stopped if the limit is exceeded. Instead
 the loop is exited similarly as if the loop condition would have become false.
 A major difference is that the loop status will be `FAIL` in this case.
+
+Starting from Robot Framework 6.1, it is possible to use `on_limit` parameter to
+configure the behaviour when the limit is exceeded. It supports two values `pass`
+and `fail`, case insensitively. If the value is `pass`, the execution will continue
+normally when the limit is reached and the status of the `WHILE` loop will be `PASS`.
+The value `fail` works similarly as the default behaviour, e.g. the loop and the
+test will fail if the limit is exceeded.
+
+.. sourcecode:: robotframework
+
+    *** Test Cases ***
+    Continue when iteration limit is reached
+        WHILE    True    limit=5    on_limit=pass
+            Log    Loop will be executed five times
+        END
+        Log    This will be executed normally.
+
+    Continue when time limit is reached
+        WHILE    True    limit=10s    on_limit=pass
+            Log    Loop will be executed for 10 seconds.
+            Sleep   0.5s
+        END
+        Log    This will be executed normally.
+
+
+By default, the error message raised when the limit is reached is
+`WHILE loop was aborted because it did not finish within the limit of 0.5
+seconds. Use the 'limit' argument to increase or remove the limit if
+needed.`. Starting from Robot Framework 6.1, the error message can be changed
+with the `on_limit_message` configuration parameter.
+
+.. sourcecode:: robotframework
+
+    *** Test Cases ***
+    Limit as iteration count
+        WHILE    True    limit=0.5s    on_limit_message=Custom While loop error message
+            Log    This is run 0.5 seconds.
+        END
+
+.. note:: `on_limit_message` configuration parameter is new in Robot Framework 6.1.
 
 __ `Time format`_
 
@@ -599,9 +725,9 @@ Nesting `WHILE` loops
 
     *** Test Cases ***
     Nesting WHILE
-        ${x} =   Set Variable    10
+        VAR    ${x}    10
         WHILE    ${x} > 0
-            ${y} =   Set Variable    ${x}
+            VAR    ${y}    ${x}
             WHILE    ${y} > 0
                 ${y} =    Evaluate    ${y} - 1
             END
@@ -621,11 +747,6 @@ It is possible to `remove or flatten unnecessary keywords`__ using
 :option:`--removekeywords` and :option:`--flattenkeywords` command line options.
 
 __ `Removing and flattening keywords`_
-
-.. _if:
-.. _if/else:
-.. _if/else structures:
-
 
 .. _BREAK:
 .. _CONTINUE:
@@ -670,6 +791,7 @@ keyword called in the loop body is invalid.
                 ${value} =    Do Something
            EXCEPT
                CONTINUE
+           END
            Do something with value    ${value}
            BREAK
        END
@@ -695,6 +817,10 @@ keyword called in the loop body is invalid.
 
 .. note:: Also the RETURN_ statement can be used to a exit loop. It only works
           when loops are used inside a `user keyword`_.
+
+.. _if:
+.. _if/else:
+.. _if/else structures:
 
 `IF/ELSE` syntax
 ----------------
@@ -800,7 +926,7 @@ equivalent:
 
 .. sourcecode:: robotframework
 
-    *** Keyword ***
+    *** Keywords ***
     Normal IF
         IF    $condition1
             Keyword    argument
@@ -817,7 +943,7 @@ The inline `IF` syntax supports also `ELSE` and `ELSE IF` branches:
 
 .. sourcecode:: robotframework
 
-    *** Keyword ***
+    *** Keywords ***
     Inline IF/ELSE
         IF    $condition    Keyword    argument    ELSE    Another Keyword
 
@@ -839,7 +965,7 @@ assignment is used and no branch is run, the variable gets value `None`.
 
 .. sourcecode:: robotframework
 
-    *** Keyword ***
+    *** Keywords ***
     Inline IF/ELSE with assignment
         ${var} =    IF    $condition    Keyword    argument    ELSE    Another Keyword
 
@@ -861,7 +987,7 @@ as `FOR-IN-ENUMERATE loop`_, `named-only arguments with user keywords`_ and
 
 .. sourcecode:: robotframework
 
-    *** Keyword ***
+    *** Keywords ***
     Log items
         [Arguments]    @{items}    ${log_values}=True
         IF    not ${items}
@@ -896,7 +1022,7 @@ Other ways to execute keywords conditionally
 
 There are also other methods to execute keywords conditionally:
 
-- The name of the keyword used as a setup or a teardown with tests__, suites__ or
+- The name of the keyword used as a setup or a teardown with suites__, tests__ and
   keywords__ can be specified using a variable. This facilitates changing them,
   for example, from the command line.
 
@@ -915,10 +1041,9 @@ There are also other methods to execute keywords conditionally:
 - There are several BuiltIn_ keywords that allow executing a named
   keyword only if a test case or test suite has failed or passed.
 
-__ `Test setup and teardown`_
 __ `Suite setup and teardown`_
-__ `Keyword teardown`_
-
+__ `Test setup and teardown`_
+__ `User keyword setup and teardown`_
 
 .. _try/except:
 
@@ -937,7 +1062,12 @@ they also mostly work the same way. A difference is that Python uses lower case
 upper case letters. A bigger difference is that with Python exceptions are objects
 and with Robot Framework you are dealing with error messages as strings.
 
+.. note:: It is not possible to catch errors caused by invalid syntax or errors
+          that `stop the whole execution`__.
+
+
 __ https://docs.python.org/tutorial/errors.html#handling-exceptions
+__ `Stopping test execution gracefully`_
 
 Catching exceptions with `EXCEPT`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1014,8 +1144,6 @@ other `EXCEPT` branches:
             Error Handler 2
         END
 
-.. note:: It is not possible to catch exceptions caused by invalid syntax.
-
 Matching errors using patterns
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1030,8 +1158,8 @@ can be defined with a variable as well.
 
 .. sourcecode:: robotframework
 
-    *** Settings ***
-    ${regexp}     regexp
+    *** Variables ***
+    ${MATCH TYPE}     regexp
 
     *** Test Cases ***
     Glob pattern
@@ -1046,7 +1174,7 @@ can be defined with a variable as well.
     Regular expression
         TRY
             Some Keyword
-        EXCEPT    ValueError: .*    type=${regexp}
+        EXCEPT    ValueError: .*    type=${MATCH TYPE}
             Error Handler 1
         EXCEPT    [Ee]rror \\d+ occurred    type=Regexp    # Backslash needs to be escaped.
             Error Handler 2
@@ -1091,9 +1219,9 @@ end of the `EXCEPT` statement:
     Capture error
         TRY
             Some Keyword
-        EXCEPT    GLOB: ValueError: *    AS   ${error}
+        EXCEPT    ValueError: *    type=GLOB    AS   ${error}
             Error Handler 1    ${error}
-        EXCEPT    REGEXP: [Ee]rror \\d+    GLOB: ${pattern}    AS    ${error}
+        EXCEPT    [Ee]rror \\d+    (Invalid|Bad) usage    type=REGEXP    AS    ${error}
             Error Handler 2    ${error}
         EXCEPT    AS    ${error}
             Error Handler 3    ${error}
@@ -1197,9 +1325,124 @@ There are also other methods to execute keywords conditionally:
   aforementioned :name:`Run Keyword And Ignore Error`. The native syntax is
   nowadays recommended instead.
 
-- `Test teardowns`_ and `keyword teardowns`_ can be used for cleaning up activities
+- `Test teardowns`__ and `keyword teardowns`__ can be used for cleaning up activities
   similarly as `FINALLY` branches.
 
 - When keywords are implemented in Python based libraries_, all Python's error
   handling features are readily available. This is the recommended approach
   especially if needed logic gets more complicated.
+
+__ `Test teardown`_
+__ `User keyword teardown`_
+
+`GROUP` syntax
+--------------
+
+The `GROUP` syntax allows grouping related keywords and control structures together:
+
+.. sourcecode:: robotframework
+
+    *** Test Cases ***
+    Valid login
+        GROUP    Open browser to login page
+            Open Browser    ${LOGIN URL}
+            Title Should Be    Login Page
+        END
+        GROUP    Submit credentials
+            Input Username    username_field    demo
+            Input Password    password_field    mode
+            Click Button    login_button
+        END
+        GROUP    Login should have succeeded
+            Title Should Be    Welcome Page
+        END
+
+    Anonymous group
+        GROUP
+            Log    Group name is optional.
+        END
+
+    Nesting
+        GROUP
+            GROUP    Nested group
+                Log    Groups can be nested.
+            END
+            IF    True
+                GROUP
+                    Log    Groups can also be nested with other control structures.
+                END
+            END
+        END
+
+As the above examples demonstrates, groups can have a name, but the name is
+optional. Groups can also be nested freely with each others and with other
+control structures.
+
+`User keywords`_ are in general recommended over the `GROUP` syntax, because
+they are reusable and because they simplify tests or keywords where they are
+used by hiding and encapsulating lower level details. In the log file user
+keywords and groups look the same, though, except that instead of a `KEYWORD`
+label there is a `GROUP` label.
+
+All groups within a test or a keyword share the same variable namespace.
+This means that, unlike when using keywords, there is no need to use arguments
+or return values for sharing values. This can be a benefit in simple cases,
+but if there are lot of variables, the benefit can turn into a problem and
+cause a huge mess.
+
+.. note:: The `GROUP` syntax is new in Robot Framework 7.2.
+
+`GROUP` with templates
+~~~~~~~~~~~~~~~~~~~~~~
+
+The `GROUP` syntax can be used for grouping iterations with `test templates`_:
+
+.. sourcecode:: robotframework
+
+    *** Settings ***
+    Library           String
+    Test Template     Upper case should be
+
+    *** Test Cases ***
+    Template example
+        GROUP    ASCII characters
+            a    A
+            z    Z
+        END
+        GROUP    Latin-1 characters
+            ä    Ä
+            ß    SS
+        END
+        GROUP    Numbers
+            1    1
+            9    9
+        END
+
+    *** Keywords ***
+    Upper case should be
+        [Arguments]    ${char}    ${expected}
+        ${actual} =    Convert To Upper Case    ${char}
+        Should Be Equal    ${actual}    ${expected}
+
+Programmatic usage
+~~~~~~~~~~~~~~~~~~
+
+One of the primary usages for groups is making it possible to create structured
+tests and user keywords programmatically. For example, the following
+`pre-run modifier`_ adds a group with two keywords at the end of each modified
+test. Groups can be added also by `listeners`_ that use the
+`listener API version 3`__.
+
+.. sourcecode:: python
+
+    from robot.api import SuiteVisitor
+
+
+    class GroupAdder(SuiteVisitor):
+
+        def start_test(self, test):
+            group = test.body.create_group(name='Example')
+            group.body.create_keyword(name='Log', args=['Hello, world!'])
+            group.body.create_keyword(name='No Operation')
+
+__ `Listener version 3`_

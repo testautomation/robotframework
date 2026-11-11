@@ -43,7 +43,7 @@ FOR IN ENUMERATE loop with three variables
 
 FOR IN ENUMERATE loop with start
     ${loop} =    Check test and get loop    ${TESTNAME}
-    Should be IN ENUMERATE loop    ${loop}           3
+    Should be IN ENUMERATE loop    ${loop}            3          start=42
 
 FOR IN ENUMERATE loop with more than three variables is invalid
     Check test and failed loop    ${TESTNAME}    IN ENUMERATE
@@ -72,14 +72,14 @@ Equal sign in variable
     ...    FOR loop iteration over values that are all in 'name=value' format like 'a=1' is deprecated.
     ...    In the future this syntax will mean iterating over names and values separately like when iterating over '\&{dict} variables.
     ...    Escape at least one of the values like 'a\\=1' to use normal FOR loop iteration and to disable this warning.
-    Check Log Message    ${tc.body[0].msgs[0]}    ${message}    WARN
-    Check Log Message    ${ERRORS}[0]             ${message}    WARN
+    Check Log Message    ${tc[0, 0]}     ${message}    WARN
+    Check Log Message    ${ERRORS}[0]    ${message}    WARN
     ${message} =    Catenate
     ...    FOR loop iteration over values that are all in 'name=value' format like 'x==1' is deprecated.
     ...    In the future this syntax will mean iterating over names and values separately like when iterating over '\&{dict} variables.
     ...    Escape at least one of the values like 'x\\==1' to use normal FOR loop iteration and to disable this warning.
-    Check Log Message    ${tc.body[2].msgs[0]}    ${message}    WARN
-    Check Log Message    ${ERRORS}[1]             ${message}    WARN
+    Check Log Message    ${tc[2, 0]}     ${message}    WARN
+    Check Log Message    ${ERRORS}[1]    ${message}    WARN
 
 Non-string keys
     Check Test Case    ${TESTNAME}

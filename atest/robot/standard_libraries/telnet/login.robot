@@ -1,8 +1,8 @@
-*** Setting ***
+*** Settings ***
 Suite Setup       Run Tests    ${EMPTY}    standard_libraries/telnet/login.robot
 Resource          telnet_resource.robot
 
-*** Test Case ***
+*** Test Cases ***
 
 Successful login without prompt
     Verify successful login
@@ -19,7 +19,7 @@ Failed login with prompt
 *** Keywords ***
 Verify successful login
     ${tc} =    Check Test Case    ${TEST NAME}
-    ${output} =    Set Variable    ${tc.kws[1].kws[0].msgs[0].message}
+    ${output} =    Set Variable    ${tc[1, 0, 0].message}
     Should Contain Once    ${output}    login: test\n
     Should Contain Once    ${output}    Password: 
     Should Contain Once    ${output}    ${FULL PROMPT.strip()}
@@ -32,7 +32,7 @@ Should Contain Once
 Verify failed login
     [Arguments]     ${user}
     ${tc} =    Check Test Case    ${TEST NAME}
-    ${output} =    Set Variable    ${tc.kws[1].msgs[0].message}
+    ${output} =    Set Variable    ${tc[1, 0].message}
     Should Contain Once    ${output}    login: ${user}\n
     Should Contain Once    ${output}    Password: 
     Should Contain Once    ${output}    Login incorrect

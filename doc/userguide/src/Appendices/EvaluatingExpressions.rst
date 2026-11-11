@@ -1,13 +1,23 @@
 Evaluating expressions
 ======================
 
+This appendix explains how expressions are evaluated using Python in different
+contexts and how variables in expressions are handled.
+
+.. contents::
+   :depth: 2
+   :local:
+
+Introduction
+------------
+
 Constructs such as `IF/ELSE structures`_, `WHILE loops`_ and `inline Python evaluation`_
 as well as several BuiltIn_ keywords accept an expression that is evaluated in Python:
 
 .. sourcecode:: robotframework
 
     *** Test Cases ***
-    If expression
+    IF/ELSE
         IF    ${x} > 0
             Log to console   ${x} is positive
         ELSE
@@ -24,8 +34,7 @@ as well as several BuiltIn_ keywords accept an expression that is evaluated in P
     Should Be True keyword
         Should Be True    ${x} > 0
 
-This section explains how the expression is evaluated and how variables in
-the expression are handled. Notice that instead of creating complicated
+Notice that instead of creating complicated
 expressions, it is often better to move the logic into a `test library`_.
 That typically eases maintenance and also enhances execution speed.
 
@@ -72,7 +81,7 @@ that is relevant in the automation context is the `selenium` module that is
 implemented, at least at the time of this writing, so that just importing
 `selenium` does not import the `selenium.webdriver` submodule.
 Another limitation is that modules cannot be used in the expression part of
-a list comprehension when using Python 3. A workaround to both of these problems
+a list comprehension. A workaround to both of these problems
 is using the BuiltIn_ keyword :name:`Evaluate` that accepts modules to be imported
 and added to the evaluation namespace as an argument:
 
@@ -96,7 +105,7 @@ and added to the evaluation namespace as an argument:
 The :name:`Evaluate` keyword also supports custom evaluation namespaces if further
 customization is needed. See its documentation in the BuiltIn_ library for more details.
 
-__ http://docs.python.org/library/functions.html#eval
+__ https://docs.python.org/library/functions.html#eval
 
 Using variables
 ---------------
@@ -169,3 +178,8 @@ This should not typically matter, but should be taken into account if
 complex expressions are evaluated often and there are strict time
 constrains. Moving such logic to test libraries is typically a good idea
 anyway.
+
+.. note:: Due to technical reasons, these special variables are available during
+          evaluation as local variables. That makes them unavailable in non-local
+          scopes such as in the expression part of list comprehensions and inside
+          lambdas.

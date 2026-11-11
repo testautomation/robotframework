@@ -24,7 +24,8 @@ UTC Time
     Compare Datatimes    ${utc2}    ${local}    difference=-${TIMEZONE}
 
 Invalid time zone
-    [Documentation]    FAIL ValueError: Unsupported timezone 'invalid'.
+    [Documentation]    FAIL
+    ...    ValueError: Argument 'time_zone' got value 'invalid' that cannot be converted to 'local' or 'UTC'.
     Get Current Date    invalid
 
 Increment
@@ -53,8 +54,8 @@ Result format custom timestamp
 
 Result format epoch
     ${result} =    Get Current Date    result_format=epoch
-    ${expected} =    Evaluate    time.time()    modules=time
-    Should Be True    0 <= ${expected} - ${result} < 1
+    # Round `time.time()` to same precision as `datetime` that `Get Current Date` uses.
+    Should Be True    0 <= round(time.time(), 6) - ${result} < 1
 
 Local and UTC epoch times are same
     ${local} =    Get Current Date    local    result_format=epoch
@@ -71,5 +72,5 @@ Result format datetime
 *** Keywords ***
 Compare Datatimes
     [Arguments]    ${dt1}    ${dt2}    ${difference}=0
-    ${result} =    Evaluate    $dt2 - $dt1 - datetime.timedelta(0, ${difference})    modules=datetime
+    ${result} =    Evaluate    $dt2 - $dt1 - datetime.timedelta(0, ${difference})
     Should Be True    0 <= ${result.total_seconds()} < 1

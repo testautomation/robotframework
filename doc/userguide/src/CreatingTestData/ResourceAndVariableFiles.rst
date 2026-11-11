@@ -1,11 +1,11 @@
 Resource and variable files
 ===========================
 
-User keywords and variables in `test case files`_ and `test suite
+User keywords and variables in `suite files`_ and `suite
 initialization files`_ can only be used in files where they are
 created, but *resource files* provide a mechanism for sharing them.
 The high level syntax for creating resource files is exactly the same
-as when creating test case files and `supported file formats`_ are the same
+as when creating suite files and `supported file formats`_ are the same
 as well. The main difference is that resource files cannot have tests.
 
 *Variable files* provide a powerful mechanism for creating and sharing
@@ -21,32 +21,42 @@ also makes them somewhat more complicated than `Variable sections`_.
 Resource files
 --------------
 
+Resource files are typically created using the plain text format, but also
+reStructuredText__, Markdown__ and JSON__ resource files are supported.
+
+__ `Resource files using reStructuredText format`_
+__ `Resource files using Markdown format`_
+__ `Resource files using JSON format`_
+
 Taking resource files into use
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Resource files are imported using the :setting:`Resource` setting in the
-Settings section. The path to the resource file is given as an argument
-to the setting. When using the `plain text format`__ for creating resource
-files, it is possible to use the normal :file:`.robot` extension but the
-dedicated :file:`.resource` extension is recommended to separate resource
-files from test case files.
+Settings section so that the path to the resource file is given as an argument
+to the setting. The recommended extension for resource files is :file:`.resource`.
+For backwards compatibility reasons also :file:`.robot`, :file:`.txt` and
+:file:`.tsv` work, but using :file:`.resource` may be mandated in the future.
 
-__ `Supported file formats`_
-
-If the path is given in an absolute format, it is used directly. In other
-cases, the resource file is first searched relatively to the directory
+If the resource file path is absolute, it is used directly. Otherwise,
+the resource file is first searched relatively to the directory
 where the importing file is located. If the file is not found there,
 it is then searched from the directories in Python's `module search path`_.
-The path can contain variables, and it is recommended to use them to make paths
-system-independent (for example, :file:`${RESOURCES}/login.resource` or
-:file:`${RESOURCE_PATH}`). Additionally, forward slashes (`/`) in the path
+Searching resource files from the module search path makes it possible to
+bundle them into Python packages as `package data`__ and importing
+them like :file:`package/example.resource`.
+
+The resource file path can contain variables, and it is recommended to use
+them to make paths system-independent (for example,
+:file:`${RESOURCES}/login.resource` or just :file:`${RESOURCE_PATH}`).
+Additionally, forward slashes (`/`) in the path
 are automatically changed to backslashes (:codesc:`\\`) on Windows.
 
 .. sourcecode:: robotframework
 
    *** Settings ***
    Resource    example.resource
-   Resource    ../data/resources.robot
+   Resource    ../resources/login.resource
+   Resource    package/example.resource
    Resource    ${RESOURCES}/common.resource
 
 The user keywords and variables defined in a resource file are
@@ -57,15 +67,18 @@ resource file.
 
 .. note:: The :file:`.resource` extension is new in Robot Framework 3.1.
 
+__ https://packaging.python.org/en/latest/guides/distributing-packages-using-setuptools/#package-data
+
 Resource file structure
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 The higher-level structure of resource files is the same as that of
-test case files otherwise, but, of course, they cannot contain Test
-Case sections. Additionally, the Setting section in resource files can
-contain only import settings (:setting:`Library`, :setting:`Resource`,
-:setting:`Variables`) and :setting:`Documentation`. The Variable section and
-Keyword section are used exactly the same way as in test case files.
+suite files otherwise, but they cannot contain tests or tasks.
+Additionally, the Setting section in resource files can contain only imports
+(:setting:`Library`, :setting:`Resource`, :setting:`Variables`),
+:setting:`Documentation` and :setting:`Keyword Tags`.
+The Variable section and Keyword section are used exactly the same way
+as in suite files.
 
 If several resource files have a user keyword with the same name, they
 must be used so that the `keyword name is prefixed with the resource
@@ -81,17 +94,16 @@ Documenting resource files
 
 Keywords created in a resource file can be documented__ using
 :setting:`[Documentation]` setting. The resource file itself can have
-:setting:`Documentation` in the Setting section similarly as
-`test suites`__.
+:setting:`Documentation` in the Setting section similarly as suites__.
 
-Both Libdoc_ and RIDE_ use these documentations, and they
+Libdoc_ and various editors use these documentations, and they
 are naturally available for anyone opening resource files.  The
 first logical line of the documentation of a keyword, until the first
 empty line, is logged when the keyword is run, but otherwise resource
 file documentation is ignored during the test execution.
 
 __ `User keyword name and documentation`_
-__ `Test suite name and documentation`_
+__ `Suite name`_
 
 Example resource file
 ~~~~~~~~~~~~~~~~~~~~~
@@ -123,6 +135,133 @@ Example resource file
        [Arguments]    ${password}
        Input Text    password_field    ${password}
 
+Resource files using reStructuredText format
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The `reStructuredText data format`_ that can be used with `suite files`_  works
+also with resource files. Such resource files can use either :file:`.rst`
+or :file:`.rest` extension and they are otherwise imported exactly as
+normal resource files:
+
+.. sourcecode:: robotframework
+
+   *** Settings ***
+   Resource         example.rst
+
+When parsing resource files using the reStructuredText format, Robot Framework
+ignores all data outside code blocks containing Robot Framework data exactly
+the same way as when parsing `reStructuredText suite files`__.
+For example, the following resource file imports :name:`OperatingSystem` library,
+defines `${MESSAGE}` variable and creates :name:`My Keyword` keyword:
+
+.. sourcecode:: rest
+
+    Resource file using reStructuredText
+    ------------------------------------
+
+    This text is outside code blocks and thus ignored.
+
+    .. code:: robotframework
+
+       *** Settings ***
+       Library          OperatingSystem
+
+       *** Variables ***
+       ${MESSAGE}       Hello, world!
+
+    Also this text is outside code blocks and ignored. Code blocks not
+    containing Robot Framework data are ignored as well.
+
+    .. code:: robotframework
+
+       # Both space and pipe separated formats are supported.
+
+       | *** Keywords ***  |                        |         |
+       | My Keyword        | [Arguments]            | ${path} |
+       |                   | Directory Should Exist | ${path} |
+
+__ `reStructuredText data format`_
+
+Resource files using Markdown format
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The `Markdown data format`_ that can be used with `suite files`_ works also with
+resource files. Such resource files can use either :file:`.md` or
+:file:`.markdown` extension and they are otherwise imported exactly as normal
+resource files:
+
+.. sourcecode:: robotframework
+
+   *** Settings ***
+   Resource         example.md
+
+When parsing resource files using the Markdown format, Robot Framework
+ignores all data outside fenced code blocks with the ``robotframework`` or ``robot``
+language tag exactly the same way as when parsing `Markdown suite files`__.
+For example, the following resource file imports :name:`OperatingSystem` library,
+defines ``${MESSAGE}`` variable and creates :name:`My Keyword` keyword:
+
+.. sourcecode:: markdown
+
+    # Resource file using Markdown
+
+    This text is outside code blocks and thus ignored.
+
+    ```robotframework
+    *** Settings ***
+    Library          OperatingSystem
+
+    *** Variables ***
+    ${MESSAGE}       Hello, world!
+    ```
+
+    Also this text is outside code blocks and ignored. Code blocks not
+    containing Robot Framework data are ignored as well.
+
+    ```robotframework
+    # Both space and pipe separated formats are supported.
+
+    | *** Keywords ***  |                        |         |
+    | My Keyword        | [Arguments]            | ${path} |
+    |                   | Directory Should Exist | ${path} |
+    ```
+
+__ `Markdown data format`_
+
+Resource files using JSON format
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Resource files can be created using JSON_ the `same way as suite files`__.
+Such JSON resource files must use either the standard :file:`.json` extension
+or the custom :file:`.rsrc` extension. They are otherwise imported exactly as
+normal resource files:
+
+.. sourcecode:: robotframework
+
+   *** Settings ***
+   Resource         example.rsrc
+
+Resource files can be converted to JSON using `ResourceFile.to_json`__ and
+recreated using `ResourceFile.from_json`__:
+
+.. sourcecode:: python
+
+   from robot.running import ResourceFile
+
+
+   # Create resource file based on data on the file system.
+   resource = ResourceFile.from_file_system('example.resource')
+
+   # Save JSON data to a file.
+   resource.to_json('example.rsrc')
+
+   # Recreate resource from JSON data.
+   resource = ResourceFile.from_json('example.rsrc')
+
+__ `JSON data format`_
+__ https://robot-framework.readthedocs.io/en/master/autodoc/robot.running.html#robot.running.model.ResourceFile.to_json
+__ https://robot-framework.readthedocs.io/en/master/autodoc/robot.running.html#robot.running.model.ResourceFile.from_json
+
 Variable files
 --------------
 
@@ -149,11 +288,12 @@ two different approaches for creating variables:
 Alternatively variable files can be implemented as `classes`__
 that the framework will instantiate. Also in this case it is possible to create
 variables as attributes or get them dynamically from the `get_variables`
-method. Variable files can also be created as `YAML files`__.
+method. Variable files can also be created as YAML__ and JSON__.
 
-__ `Setting variables in command line`_
+__ `Command line variables`_
 __ `Implementing variable file as a class`_
 __ `Variable file as YAML`_
+__ `Variable file as JSON`_
 
 Taking variable files into use
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -250,7 +390,7 @@ set with the :option:`--variable` option. If both :option:`--variablefile` and
 names, those that are set individually with
 :option:`--variable` option take precedence.
 
-__ `Setting variables in command line`_
+__ `Command line variables`_
 
 Getting variables directly from a module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -296,8 +436,8 @@ respectively:
 These prefixes will not be part of the final variable name, but they cause
 Robot Framework to validate that the value actually is list-like or
 dictionary-like. With dictionaries the actual stored value is also turned
-into a special dictionary that is used also when `creating dictionary
-variables`_ in the Variable section. Values of these dictionaries are accessible
+into a special dictionary that is used also when `creating dictionaries`_
+in the Variable section. Values of these dictionaries are accessible
 as attributes like `${FINNISH.cat}`. These dictionaries are also ordered, but
 preserving the source order requires also the original dictionary to be
 ordered.
@@ -463,7 +603,7 @@ The example below is functionally identical to the first example related to
 `get_variables` can also take arguments, which facilitates changing
 what variables actually are created. Arguments to the function are set just
 as any other arguments for a Python function. When `taking variable files
-into use`_ in the test data, arguments are specified in cells after the path
+into use`_, arguments are specified after the path
 to the variable file, and in the command line they are separated from the
 path with a colon or a semicolon.
 
@@ -484,6 +624,17 @@ or database where to read variables from.
             return variables1
         else:
             return variables2
+
+Starting from Robot Framework 7.0, arguments to variable files support automatic
+argument conversion as well as named argument syntax. For example, a variable
+file with `get_variables(first: int = 0, second: str = '')` could be imported
+like this:
+
+.. sourcecode:: robotframework
+
+   *** Settings ***
+   Variables    example.py    42              # Converted to integer.
+   Variables    example.py    second=value    # Named argument syntax.
 
 Implementing variable file as a class
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -538,8 +689,9 @@ creates only one variable `${DYNAMIC VARIABLE}`.
 Variable file as YAML
 ~~~~~~~~~~~~~~~~~~~~~
 
-Variable files can also be implemented as `YAML <http://yaml.org>`_ files.
-YAML is a data serialization language with a simple and human-friendly syntax.
+Variable files can also be implemented as `YAML <https://yaml.org>`_ files.
+YAML is a data serialization language with a simple and human-friendly syntax
+that is nevertheless easy for machines to parse.
 The following example demonstrates a simple YAML file:
 
 .. sourcecode:: yaml
@@ -554,20 +706,11 @@ The following example demonstrates a simple YAML file:
       two: kaksi
       with spaces: kolme
 
-.. note:: Using YAML files with Robot Framework requires `PyYAML
-          <http://pyyaml.org>`_ module to be installed. If you have
-          pip_ installed, you can install it simply by running
-          `pip install pyyaml`.
-
-          YAML variable files must have either :file:`.yaml` or :file:`.yml`
-          extension. Support for the :file:`.yml` extension is new in
-          Robot Framework 3.2.
-
 YAML variable files can be used exactly like normal variable files
 from the command line using :option:`--variablefile` option, in the Settings
 section using :setting:`Variables` setting, and dynamically using the
-:name:`Import Variables` keyword.
-
+:name:`Import Variables` keyword. They are automatically recognized by their
+extension that must be either :file:`.yaml` or :file:`.yml`.
 If the above YAML file is imported, it will create exactly the same variables
 as this Variable section:
 
@@ -577,19 +720,56 @@ as this Variable section:
    ${STRING}     Hello, world!
    ${INTEGER}    ${42}
    @{LIST}       one         two
-   &{DICT}       one=yksi    two=kaksi
+   &{DICT}       one=yksi    two=kaksi    with spaces=kolme
 
-YAML files used as variable files must always be mappings in the top level.
+YAML files used as variable files must always be mappings on the top level.
 As the above example demonstrates, keys and values in the mapping become
 variable names and values, respectively. Variable values can be any data
 types supported by YAML syntax. If names or values contain non-ASCII
 characters, YAML variables files must be UTF-8 encoded.
 
 Mappings used as values are automatically converted to special dictionaries
-that are used also when `creating dictionary variables`_ in the Variable section.
+that are used also when `creating dictionaries`_ in the Variable section.
 Most importantly, values of these dictionaries are accessible as attributes
 like `${DICT.one}`, assuming their names are valid as Python attribute names.
 If the name contains spaces or is otherwise not a valid attribute name, it is
 always possible to access dictionary values using syntax like
-`${DICT}[with spaces]` syntax. The created dictionaries are also ordered, but
-unfortunately the original source order of in the YAML file is not preserved.
+`${DICT}[with spaces]` syntax.
+
+.. note:: Using YAML files with Robot Framework requires `PyYAML
+          <https://pyyaml.org>`_ module to be installed. You can typically
+          install it with pip_ like `pip install pyyaml`.
+
+Variable file as JSON
+~~~~~~~~~~~~~~~~~~~~~
+
+Variable files can also be implemented as `JSON <https://json.org>`_ files.
+Similarly as YAML discussed in the previous section, JSON is a data
+serialization format targeted both for humans and machines. It is based on
+JavaScript syntax and it is not as human-friendly as YAML, but it still
+relatively easy to understand and modify. The following example contains
+exactly the same data as the earlier YAML example:
+
+.. sourcecode:: json
+
+    {
+        "string": "Hello, world!",
+        "integer": 42,
+        "list": [
+            "one",
+            "two"
+        ],
+        "dict": {
+            "one": "yksi",
+            "two": "kaksi",
+            "with spaces": "kolme"
+        }
+    }
+
+JSON variable files are automatically recognized by their :file:`.json`
+extension and they can be used exactly like YAML variable files. They
+also have exactly same requirements for structure, encoding, and so on.
+Unlike YAML, Python supports JSON out-of-the-box so no extra modules need
+to be installed.
+
+.. note:: Support for JSON variable files is new in Robot Framework 6.1.

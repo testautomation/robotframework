@@ -3,9 +3,13 @@ Resource         resource.resource
 Resource         resource.robot
 Resource         resource.txt
 Resource         resource.TSV
-Resource         resource.invalid
 Resource         resource.rst
 Resource         resource.reST
+Resource         resource.rsrc
+Resource         resource.json
+Resource         resource.md
+Resource         resource.markdown
+Resource         resource.invalid
 
 *** Test Cases ***
 Resource with '*.resource' extension
@@ -35,6 +39,22 @@ Resource with '*.rst' extension
 Resource with '*.rest' extension
     Keyword in resource.rest
     Should Be Equal    ${REST}    resource.reST
+
+Resource with '*.rsrc' extension
+    Keyword in resource.json
+    Should Be Equal    ${JSON}    resource.json
+
+Resource with '*.json' extension
+    Keyword in resource.json
+    Should Be Equal    ${JSON}    resource.json
+
+Resource with '*.md' extension
+    Keyword in resource.md
+    Should Be Equal    ${MD}    resource.md
+
+Resource with '*.markdown' extension
+    Keyword in resource.markdown
+    Should Be Equal    ${MARKDOWN}    resource.markdown
 
 Resource with invalid extension
     [Documentation]    FAIL    No keyword with name 'Keyword in resource.invalid' found.

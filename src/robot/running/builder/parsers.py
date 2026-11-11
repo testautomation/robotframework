@@ -13,133 +13,238 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import os
-from ast import NodeVisitor
+import re
+from abc import ABC
+from inspect import signature
+from pathlib import Path
+from typing import Callable
 
+from robot.conf import LanguagesLike
 from robot.errors import DataError
-from robot.output import LOGGER
-from robot.parsing import get_model, get_resource_model, get_init_model, Token
-from robot.utils import FileReader, read_rest_data
+from robot.parsing import File, get_init_model, get_model, get_resource_model
+from robot.parsing.model import ModelVisitor, Statement
+from robot.utils import FileReader, get_error_message, type_name
 
-from .testsettings import TestDefaults
-from .transformers import SuiteBuilder, SettingsBuilder, ResourceBuilder
-from ..model import TestSuite, ResourceFile
-
-
-class BaseParser:
-
-    def parse_init_file(self, source, defaults=None):
-        raise NotImplementedError
-
-    def parse_suite_file(self, source, defaults=None):
-        raise NotImplementedError
-
-    def parse_resource_file(self, source):
-        raise NotImplementedError
+from ..model import TestSuite
+from ..resourcemodel import ResourceFile
+from .settings import FileSettings, InitFileSettings, TestDefaults
+from .transformers import ResourceBuilder, SuiteBuilder
 
 
-class RobotParser(BaseParser):
+class Parser(ABC):
 
-    def __init__(self, process_curdir=True):
+    @property
+    def name(self) -> str:
+        return type(self).__name__
+
+    def parse_suite_file(self, source: Path, defaults: TestDefaults) -> TestSuite:
+        raise DataError(f"'{self.name}' does not support parsing suite files.")
+
+    def parse_init_file(self, source: Path, defaults: TestDefaults) -> TestSuite:
+        raise DataError(f"'{self.name}' does not support parsing initialization files.")
+
+    def parse_resource_file(self, source: Path) -> ResourceFile:
+        raise DataError(f"'{self.name}' does not support parsing resource files.")
+
+
+class RobotParser(Parser):
+    extensions = ()
+
+    def __init__(self, lang: LanguagesLike = None, process_curdir: bool = True):
+        self.lang = lang
         self.process_curdir = process_curdir
 
-    def parse_init_file(self, source, defaults=None):
-        directory = os.path.dirname(source)
-        suite = TestSuite(name=format_name(directory), source=directory)
-        return self._build(suite, source, defaults, get_model=get_init_model)
+    def parse_suite_file(self, source: Path, defaults: TestDefaults) -> TestSuite:
+        model = self._get_model(get_model, source)
+        return self.parse_model(model, defaults)
 
-    def parse_suite_file(self, source, defaults=None):
-        suite = TestSuite(name=format_name(source), source=source)
-        return self._build(suite, source, defaults)
-
-    def build_suite(self, model, name=None, defaults=None):
-        source = model.source
-        suite = TestSuite(name=name or format_name(source), source=source)
-        return self._build(suite, source, defaults, model)
-
-    def _build(self, suite, source, defaults, model=None, get_model=get_model):
-        if defaults is None:
-            defaults = TestDefaults()
-        if model is None:
-            model = get_model(self._get_source(source), data_only=True,
-                              curdir=self._get_curdir(source))
-        ErrorReporter(source).visit(model)
-        SettingsBuilder(suite, defaults).visit(model)
-        SuiteBuilder(suite, defaults).visit(model)
-        suite.rpa = self._get_rpa_mode(model)
+    def parse_init_file(self, source: Path, defaults: TestDefaults) -> TestSuite:
+        model = self._get_model(get_init_model, source)
+        suite = TestSuite(
+            name=TestSuite.name_from_source(source.parent),
+            source=source.parent,
+            rpa=None,
+        )
+        SuiteBuilder(suite, InitFileSettings(defaults)).build(model)
         return suite
 
-    def _get_curdir(self, source):
-        if not self.process_curdir:
-            return None
-        return os.path.dirname(source).replace('\\', '\\\\')
+    def parse_model(
+        self,
+        model: File,
+        defaults: "TestDefaults | None" = None,
+    ) -> TestSuite:
+        name = TestSuite.name_from_source(model.source, self.extensions)
+        suite = TestSuite(name=name, source=model.source)
+        SuiteBuilder(suite, FileSettings(defaults)).build(model)
+        return suite
 
-    def _get_source(self, source):
+    def _get_model(self, model_getter: Callable[..., File], source: Path) -> File:
+        model = model_getter(
+            self._get_source(source),
+            data_only=True,
+            curdir=self._get_curdir(source),
+            lang=self.lang,
+        )
+        model.source = source
+        return model
+
+    def _get_curdir(self, source: Path) -> "str | None":
+        return str(source.parent).replace("\\", "\\\\") if self.process_curdir else None
+
+    def _get_source(self, source: Path) -> "Path | str":
         return source
 
-    def parse_resource_file(self, source):
-        model = get_resource_model(self._get_source(source), data_only=True,
-                                   curdir=self._get_curdir(source))
-        resource = ResourceFile(source=source)
-        ErrorReporter(source).visit(model)
-        ResourceBuilder(resource).visit(model)
-        return resource
+    def parse_resource_file(self, source: Path) -> ResourceFile:
+        model = self._get_model(get_resource_model, source)
+        return self.parse_resource_model(model)
 
-    def _get_rpa_mode(self, data):
-        if not data:
-            return None
-        tasks = [s.tasks for s in data.sections if hasattr(s, 'tasks')]
-        if all(tasks) or not any(tasks):
-            return tasks[0] if tasks else None
-        raise DataError('One file cannot have both tests and tasks.')
+    def parse_resource_model(self, model: File) -> ResourceFile:
+        resource = ResourceFile(source=model.source)
+        ResourceBuilder(resource).build(model)
+        return resource
 
 
 class RestParser(RobotParser):
+    extensions = (".robot.rst", ".rst", ".rest")
 
-    def _get_source(self, source):
+    def _get_source(self, source: Path) -> str:
+        from .restreader import read_rest_data
+
         with FileReader(source) as reader:
             return read_rest_data(reader)
 
 
-class NoInitFileDirectoryParser(BaseParser):
+class MarkdownParser(RobotParser):
+    extensions = (".robot.md", ".md", ".markdown")
 
-    def parse_init_file(self, source, defaults=None):
-        return TestSuite(name=format_name(source), source=source)
+    def _get_model(self, model_getter: Callable[..., File], source: Path) -> File:
+        with FileReader(source) as reader:
+            data, offsets = self._read_markdown_data(reader)
+        model = model_getter(
+            data,
+            data_only=True,
+            curdir=self._get_curdir(source),
+            lang=self.lang,
+        )
+        model.source = source
+        if offsets:
+            ColumnOffsetUpdater(offsets).visit(model)
+        return model
+
+    def _read_markdown_data(self, mdfile: FileReader) -> "tuple[str, dict[int, int]]":
+        fence_open = re.compile(r"(\s*)(`{3,}|~{3,})\s*(\S+)")
+        fence_close = None
+        fence_indent = 0
+        data = []
+        offsets = {}
+        for lineno, line in enumerate(mdfile.readlines(), start=1):
+            if fence_close is None:
+                # Lines outside code blocks are replaced with empty lines to
+                # preserve line numbers.
+                data.append("\n")
+                match = fence_open.match(line)
+                if match:
+                    indent, fence, lang = match.groups()
+                    if lang.lower() in ("robotframework", "robot"):
+                        fence_close = re.compile(rf"\s*{fence[0]}{{{len(fence)},}}\s*")
+                        fence_indent = len(indent)
+            elif fence_close.fullmatch(line):
+                data.append("\n")
+                fence_close = None
+            elif line.strip():
+                offset = min(len(line) - len(line.lstrip()), fence_indent)
+                data.append(line[offset:])
+                if offset:
+                    offsets[lineno] = offset
+            else:
+                data.append(line)
+        return "".join(data), offsets
 
 
-def format_name(source):
-    def strip_possible_prefix_from_name(name):
-        result = name.split('__', 1)[-1]
-        if result:
-            return result
-        return name
+class ColumnOffsetUpdater(ModelVisitor):
 
-    def format_name(name):
-        name = strip_possible_prefix_from_name(name)
-        name = name.replace('_', ' ').strip()
-        return name.title() if name.islower() else name
+    def __init__(self, offsets: "dict[int, int]"):
+        self.offsets = offsets
 
-    if source is None:
-        return None
-    if os.path.isdir(source):
-        basename = os.path.basename(source)
-    else:
-        basename = os.path.splitext(os.path.basename(source))[0]
-    return format_name(basename)
+    def visit_Statement(self, node: Statement):
+        for token in node.tokens:
+            token.col_offset += self.offsets.get(token.lineno, 0)
 
 
-class ErrorReporter(NodeVisitor):
+class JsonParser(Parser):
 
-    def __init__(self, source):
-        self.source = source
+    def parse_suite_file(self, source: Path, defaults: TestDefaults) -> TestSuite:
+        return TestSuite.from_json(source)
 
-    def visit_Error(self, node):
-        fatal = node.get_token(Token.FATAL_ERROR)
-        if fatal:
-            raise DataError(self._format_message(fatal))
-        for error in node.get_tokens(Token.ERROR):
-            LOGGER.error(self._format_message(error))
+    def parse_init_file(self, source: Path, defaults: TestDefaults) -> TestSuite:
+        return TestSuite.from_json(source)
 
-    def _format_message(self, token):
-        return ("Error in file '%s' on line %s: %s"
-                % (self.source, token.lineno, token.error))
+    def parse_resource_file(self, source: Path) -> ResourceFile:
+        try:
+            return ResourceFile.from_json(source)
+        except DataError as err:
+            raise DataError(f"Parsing JSON resource file '{source}' failed: {err}")
+
+
+class NoInitFileDirectoryParser(Parser):
+
+    def parse_init_file(self, source: Path, defaults: TestDefaults) -> TestSuite:
+        return TestSuite(
+            name=TestSuite.name_from_source(source),
+            source=source,
+            rpa=None,
+        )
+
+
+class CustomParser(Parser):
+
+    def __init__(self, parser):
+        self.parser = parser
+        if not getattr(parser, "parse", None):
+            raise TypeError(f"'{self.name}' does not have mandatory 'parse' method.")
+        if not self.extensions:
+            raise TypeError(
+                f"'{self.name}' does not have mandatory 'EXTENSION' or 'extension' "
+                f"attribute."
+            )
+
+    @property
+    def name(self) -> str:
+        return type_name(self.parser)
+
+    @property
+    def extensions(self) -> "tuple[str, ...]":
+        ext = (
+            getattr(self.parser, "EXTENSION", None)
+            or getattr(self.parser, "extension", None)
+        )  # fmt: skip
+        extensions = [ext] if isinstance(ext, str) else list(ext or ())
+        return tuple(ext.lower().lstrip(".") for ext in extensions)
+
+    def parse_suite_file(self, source: Path, defaults: TestDefaults) -> TestSuite:
+        return self._parse(self.parser.parse, source, defaults)
+
+    def parse_init_file(self, source: Path, defaults: TestDefaults) -> TestSuite:
+        parse_init = getattr(self.parser, "parse_init", None)
+        try:
+            return self._parse(parse_init, source, defaults, init=True)
+        except NotImplementedError:
+            return super().parse_init_file(source, defaults)  # Raises DataError
+
+    def _parse(self, method, source, defaults, init=False) -> TestSuite:
+        if not method:
+            raise NotImplementedError
+        accepts_defaults = len(signature(method).parameters) == 2
+        try:
+            suite = method(source, defaults) if accepts_defaults else method(source)
+            if not isinstance(suite, TestSuite):
+                raise TypeError(
+                    f"Return value should be 'robot.running.TestSuite', got "
+                    f"'{type_name(suite)}'."
+                )
+        except Exception:
+            method_name = "parse" if not init else "parse_init"
+            raise DataError(
+                f"Calling '{self.name}.{method_name}()' failed: {get_error_message()}"
+            )
+        return suite

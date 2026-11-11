@@ -1,3 +1,6 @@
+*** Variables ***
+&{dict}
+
 *** Test Cases ***
 IF passing
     IF    True    Log    reached this
@@ -58,6 +61,14 @@ Assign
     Should Be Equal    ${y}    ${2}
     Should Be Equal    ${z}    ${3}
 
+Assign with item
+    ${dict}[x] =    IF    1    Convert to integer    1    ELSE IF    2    Convert to integer    2    ELSE    Convert to integer    3
+    ${dict}[y] =    IF    0    Convert to integer    1    ELSE IF    2    Convert to integer    2    ELSE    Convert to integer    3
+    ${dict}[z] =    IF    0    Convert to integer    1    ELSE IF    0    Convert to integer    2    ELSE    Convert to integer    3
+    Should Be Equal    ${dict}[x]    ${1}
+    Should Be Equal    ${dict}[y]    ${2}
+    Should Be Equal    ${dict}[z]    ${3}
+
 Multi assign
     [Documentation]    FAIL Cannot set variables: Expected 3 return values, got 2.
     ${x}    ${y}    ${z} =    IF    True    Create list    a    b    c    ELSE    Not run
@@ -77,6 +88,11 @@ List assign
 Dict assign
     &{x} =    IF    False    Not run    ELSE    Create dictionary    a=1    b=2
     Should Be True    ${x} == {'a': '1', 'b': '2'}
+
+Assign based on another variable
+    VAR    ${x}    y
+    ${${x}} =    IF    True    Set Variable    Y    ELSE    Not run
+    Should Be Equal    ${y}    Y
 
 Assign without ELSE
     ${x} =    IF    True    Set variable    Hello!
